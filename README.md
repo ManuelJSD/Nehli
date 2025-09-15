@@ -1,27 +1,74 @@
-# Nehli
+# Nehli Front
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 15.2.4.
+Frontend de **Nehli**, una plataforma web de streaming de video bajo demanda inspirada en Netflix.  
+Este proyecto está desarrollado en **Angular 15** y utiliza **PrimeNG** para la interfaz y **Video.js** como reproductor multimedia.
 
-## Development server
+---
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+## 🚀 Características
 
-## Code scaffolding
+- Reproducción de video bajo demanda con [Video.js](https://videojs.com/).
+- Interfaz moderna con [PrimeNG](https://primeng.org/) y [PrimeIcons](https://primefaces.org/primeicons/).
+- Arquitectura modular en Angular.
+- Integración prevista con backend propio (API REST).
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+---
 
-## Build
+## 📦 Tecnologías
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+- **Framework:** Angular 15  
+- **UI:** PrimeNG + PrimeIcons  
+- **Player:** Video.js  
+- **Librerías base:** RxJS, Zone.js  
 
-## Running unit tests
+---
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+## 🔧 Requisitos previos
 
-## Running end-to-end tests
+- Node.js >= 16  
+- Angular CLI >= 15  
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+---
 
-## Further help
+## ▶️ Ejecución en local
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+```bash
+# Clonar repositorio
+git clone https://github.com/Lorwik/Nehli-Front.git
+cd Nehli-Front
+
+# Instalar dependencias
+npm install
+
+# Levantar servidor de desarrollo
+npm start
+```
+
+La aplicación estará disponible en `http://localhost:4200/`.
+
+---
+
+## 🛠️ Scripts disponibles
+
+- `npm start` → inicia servidor de desarrollo.  
+- `npm run build` → compila la aplicación para producción.  
+- `npm test` → ejecuta los tests unitarios.  
+
+---
+
+## 🔗 Repos relacionados
+
+- [Nehli Backend](https://github.com/Lorwik/Nehli-Backend)  
+
+---
+
+## 📌 Estado del proyecto
+
+Este repositorio corresponde al **frontend** y está en desarrollo.  
+El objetivo final es disponer de una **plataforma de streaming** con gestión de usuarios, listas de reproducción y reproducción multimedia bajo demanda.
+
+---
+
+## 📄 Licencia
+
+MIT
