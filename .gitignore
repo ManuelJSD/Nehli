@@ -37,6 +37,10 @@ build/
 *.sublime-project
 .history/
 
+# AI tooling
+.agents/
+skills-lock.json
+
 # Sistema operativo
 .DS_Store
 Thumbs.db
