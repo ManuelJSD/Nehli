@@ -1,0 +1,95 @@
+<div class="auth-page">
+  <div class="bg-overlay"></div>
+
+  <!-- Header -->
+  <header class="auth-header">
+    <a routerLink="/" class="logo-link" aria-label="Volver al inicio">
+      <img src="assets/images/logo.webp" alt="Nehli" class="logo">
+    </a>
+  </header>
+
+  <!-- Formulario -->
+  <main class="auth-main">
+    <div class="auth-card">
+      <div class="card-glow"></div>
+
+      <h1 class="auth-title">Crear tu cuenta</h1>
+      <p class="auth-subtitle">Únete a Nehli y descubre tu entretenimiento</p>
+
+      <form (ngSubmit)="onSubmit()" class="auth-form">
+        <!-- Campo usuario -->
+        <div class="form-group">
+          <label for="reg-username" class="form-label">
+            <i class="pi pi-user"></i>
+            Usuario
+          </label>
+          <input
+            id="reg-username"
+            type="text"
+            placeholder="Elige un nombre de usuario"
+            name="username"
+            [(ngModel)]="username"
+            autocomplete="username"
+            [disabled]="isLoading"
+            class="form-input">
+        </div>
+
+        <!-- Campo email -->
+        <div class="form-group">
+          <label for="reg-email" class="form-label">
+            <i class="pi pi-envelope"></i>
+            Email
+          </label>
+          <input
+            id="reg-email"
+            type="email"
+            placeholder="tucorreo@ejemplo.com"
+            name="email"
+            [(ngModel)]="email"
+            autocomplete="email"
+            [disabled]="isLoading"
+            class="form-input">
+        </div>
+
+        <!-- Campo contraseña -->
+        <div class="form-group">
+          <label for="reg-password" class="form-label">
+            <i class="pi pi-lock"></i>
+            Contraseña
+          </label>
+          <input
+            id="reg-password"
+            type="password"
+            placeholder="Mínimo 4 caracteres"
+            name="password"
+            [(ngModel)]="password"
+            autocomplete="new-password"
+            [disabled]="isLoading"
+            class="form-input">
+        </div>
+
+        <!-- Mensaje de error -->
+        <div *ngIf="registerError" class="error-banner" role="alert">
+          <i class="pi pi-exclamation-circle"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Botón submit -->
+        <button
+          pButton
+          type="submit"
+          [label]="isLoading ? 'Creando cuenta...' : 'Crear cuenta'"
+          [icon]="isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-user-plus'"
+          [disabled]="isLoading || !username || !password || !email"
+          class="btn-submit">
+        </button>
+      </form>
+
+      <!-- Link a login -->
+      <div class="auth-footer">
+        <span class="footer-text">¿Ya tienes cuenta?</span>
+        <a routerLink="/login" class="footer-link">Iniciar sesión</a>
+      </div>
+    </div>
+  </main>
+</div>

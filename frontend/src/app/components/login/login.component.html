@@ -1,0 +1,78 @@
+<div class="auth-page">
+  <div class="bg-overlay"></div>
+
+  <!-- Header -->
+  <header class="auth-header">
+    <a routerLink="/" class="logo-link" aria-label="Volver al inicio">
+      <img src="assets/images/logo.webp" alt="Nehli" class="logo">
+    </a>
+  </header>
+
+  <!-- Formulario -->
+  <main class="auth-main">
+    <div class="auth-card">
+      <div class="card-glow"></div>
+
+      <h1 class="auth-title">Bienvenido de nuevo</h1>
+      <p class="auth-subtitle">Inicia sesión para acceder a tu contenido</p>
+
+      <form (ngSubmit)="onSubmit()" class="auth-form">
+        <!-- Campo usuario -->
+        <div class="form-group">
+          <label for="login-username" class="form-label">
+            <i class="pi pi-user"></i>
+            Usuario
+          </label>
+          <input
+            id="login-username"
+            type="text"
+            placeholder="Tu nombre de usuario"
+            name="username"
+            [(ngModel)]="username"
+            autocomplete="username"
+            [disabled]="isLoading"
+            class="form-input">
+        </div>
+
+        <!-- Campo contraseña -->
+        <div class="form-group">
+          <label for="login-password" class="form-label">
+            <i class="pi pi-lock"></i>
+            Contraseña
+          </label>
+          <input
+            id="login-password"
+            type="password"
+            placeholder="Tu contraseña"
+            name="password"
+            [(ngModel)]="password"
+            autocomplete="current-password"
+            [disabled]="isLoading"
+            class="form-input">
+        </div>
+
+        <!-- Mensaje de error -->
+        <div *ngIf="loginError" class="error-banner" role="alert">
+          <i class="pi pi-exclamation-circle"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Botón submit -->
+        <button
+          pButton
+          type="submit"
+          [label]="isLoading ? 'Entrando...' : 'Iniciar sesión'"
+          [icon]="isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-sign-in'"
+          [disabled]="isLoading || !username || !password"
+          class="btn-submit">
+        </button>
+      </form>
+
+      <!-- Link a registro -->
+      <div class="auth-footer">
+        <span class="footer-text">¿No tienes cuenta?</span>
+        <a routerLink="/register" class="footer-link">Crear una cuenta</a>
+      </div>
+    </div>
+  </main>
+</div>

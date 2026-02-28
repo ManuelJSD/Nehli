@@ -8,32 +8,38 @@ import { LoginService } from 'src/app/services/login.service';
   styleUrls: ['./login.component.css']
 })
 export class LoginComponent {
-  username!: string;
-  password!: string;
+  username: string = '';
+  password: string = '';
+  isLoading = false;
   loginError = false;
-  errorMessage: string | undefined;
+  errorMessage = '';
 
   constructor(private loginService: LoginService, private router: Router) { }
 
   onSubmit() {
+    // Evitar envío si ya está cargando o campos vacíos
+    if (this.isLoading || !this.username.trim() || !this.password.trim()) {
+      return;
+    }
+
+    this.isLoading = true;
+    this.loginError = false;
+
     this.loginService.login(this.username, this.password).subscribe({
       next: (response) => {
-        // Si la respuesta tiene la propiedad 'data' (porque en el backend usas res.send({ data }))
         if (response.data) {
-          //console.log(response.data);
           this.router.navigate(['/browser']);
         } else {
-          //console.log('Login error:', response);
           this.loginError = true;
-          this.errorMessage = "El usuario o la contraseña son incorrectos.";
+          this.errorMessage = 'El usuario o la contraseña son incorrectos.';
         }
+        this.isLoading = false;
       },
-      error: (error) => {
-        //console.log('Login error:', error);
+      error: () => {
         this.loginError = true;
-        this.errorMessage = "Error en la solicitud al servidor.";
+        this.errorMessage = 'Error en la solicitud al servidor. Inténtalo de nuevo.';
+        this.isLoading = false;
       }
     });
   }
-
 }

@@ -1,0 +1,93 @@
+<div class="welcome-page">
+  <!-- Overlay gradiente oscuro sobre la imagen de fondo -->
+  <div class="bg-overlay"></div>
+  <div class="bg-grain"></div>
+
+  <!-- Header con glassmorphism -->
+  <header class="header" role="banner">
+    <img src="assets/images/logo.webp" alt="Nehli - Plataforma de entretenimiento" class="logo">
+    <nav class="nav-buttons" role="navigation" aria-label="Acciones principales">
+      <button pButton type="button" routerLink="/login"
+              label="Iniciar sesión"
+              class="p-button-outlined p-button-sm btn-login"
+              icon="pi pi-sign-in">
+      </button>
+      <button pButton type="button" routerLink="/register"
+              label="Crear cuenta"
+              class="p-button-sm btn-register"
+              icon="pi pi-user-plus">
+      </button>
+    </nav>
+  </header>
+
+  <!-- Hero principal -->
+  <main class="hero" role="main">
+    <div class="hero-content">
+      <span class="hero-badge">✦ Tu universo de entretenimiento</span>
+      <h1 class="hero-title">
+        Todo lo que necesitas para disfrutar al máximo
+        <span class="title-accent">tus momentos.</span>
+      </h1>
+      <p class="hero-subtitle">
+        Películas, series, anime y música — todo en un solo lugar.
+        <br>Disfruta donde quieras, cuando quieras.
+      </p>
+      <div class="hero-cta">
+        <button pButton type="button" routerLink="/register"
+                label="Comenzar gratis"
+                class="p-button-lg btn-cta"
+                icon="pi pi-play">
+        </button>
+        <button pButton type="button" routerLink="/login"
+                label="Ya tengo cuenta"
+                class="p-button-lg p-button-text btn-cta-secondary"
+                icon="pi pi-arrow-right"
+                iconPos="right">
+        </button>
+      </div>
+    </div>
+
+    <!-- Elemento decorativo flotante -->
+    <div class="hero-glow"></div>
+  </main>
+
+  <!-- Sección de features -->
+  <section class="features" aria-label="Características principales">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <i class="pi pi-video"></i>
+      </div>
+      <h3 class="feature-title">Películas y Series</h3>
+      <p class="feature-desc">Tu biblioteca personal con acceso ilimitado a todo tu contenido.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">
+        <i class="pi pi-star-fill"></i>
+      </div>
+      <h3 class="feature-title">Seguimiento de Anime</h3>
+      <p class="feature-desc">Descubre populares, por temporada o género con datos actualizados.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">
+        <i class="pi pi-volume-up"></i>
+      </div>
+      <h3 class="feature-title">Música</h3>
+      <p class="feature-desc">Accede a tu colección musical completa desde cualquier lugar.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">
+        <i class="pi pi-shield"></i>
+      </div>
+      <h3 class="feature-title">Privado y Seguro</h3>
+      <p class="feature-desc">Tu contenido, tus reglas. Sin anuncios, sin rastreo.</p>
+    </div>
+  </section>
+
+  <!-- Footer mínimo -->
+  <footer class="welcome-footer">
+    <p>Nehli — Tu entretenimiento, sin límites.</p>
+  </footer>
+</div>
