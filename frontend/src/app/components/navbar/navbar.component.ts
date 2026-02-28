@@ -11,7 +11,7 @@ import { LoginService } from 'src/app/services/login.service';
 export class NavbarComponent {
   items!: MenuItem[];
 
-  constructor(private loginService: LoginService, private router: Router) {}
+  constructor(private loginService: LoginService, private router: Router) { }
 
   ngOnInit() {
     this.items = [
@@ -42,20 +42,26 @@ export class NavbarComponent {
         ]
       },
       {
-        label: 'Enlaces de interes',
-        icon: 'pi pi-desktop',
+        label: 'Enlaces de interés',
+        icon: 'pi pi-link',
         items: [
           {
             label: 'FilmAffinity',
-            icon: 'pi pi-align-left',
+            icon: 'pi pi-star',
+            url: 'https://www.filmaffinity.com',
+            target: '_blank'
           },
           {
             label: 'MyAnimeList',
-            icon: 'pi pi-camera',
+            icon: 'pi pi-list',
+            url: 'https://myanimelist.net',
+            target: '_blank'
           },
           {
             label: 'YouTube',
             icon: 'pi pi-youtube',
+            url: 'https://www.youtube.com',
+            target: '_blank'
           },
         ]
       },
