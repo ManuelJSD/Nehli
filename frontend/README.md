@@ -1,74 +1,67 @@
-# Nehli Front
+# 🎬 Nehli - Frontend
 
-Frontend de **Nehli**, una plataforma web de streaming de video bajo demanda inspirada en Netflix.  
-Este proyecto está desarrollado en **Angular 15** y utiliza **PrimeNG** para la interfaz y **Video.js** como reproductor multimedia.
-
----
-
-## 🚀 Características
-
-- Reproducción de video bajo demanda con [Video.js](https://videojs.com/).
-- Interfaz moderna con [PrimeNG](https://primeng.org/) y [PrimeIcons](https://primefaces.org/primeicons/).
-- Arquitectura modular en Angular.
-- Integración prevista con backend propio (API REST).
+Este directorio contiene la aplicación cliente de **Nehli**, desarrollada en **Angular 15**. Se encarga de proveer una interfaz de usuario moderna, oscura y cinematográfica adaptada al estilo de plataformas de streaming premium.
 
 ---
 
-## 📦 Tecnologías
+## 🚀 Características del Cliente
 
-- **Framework:** Angular 15  
-- **UI:** PrimeNG + PrimeIcons  
-- **Player:** Video.js  
-- **Librerías base:** RxJS, Zone.js  
-
----
-
-## 🔧 Requisitos previos
-
-- Node.js >= 16  
-- Angular CLI >= 15  
+- Reproductor de video integrado y personalizado mediante [Video.js](https://videojs.com/).
+- Componentes modulares y visualmente atractivos gracias al uso e integración de [PrimeNG](https://primeng.org/) y PrimeIcons.
+- Consumo e intercepción fluida de la API REST para el backend de Nehli.
+- Sistema de enrutamiento y guardias de navegación entre catálogo, previsualización, login y registro.
+- Interfaz y disposición del diseño completamente responsiva para cualquier tamaño de pantalla.
+- Implementación de animaciones premium y optimización del CSS global para mantener coherencia en el diseño.
 
 ---
 
-## ▶️ Ejecución en local
+## 📦 Stack Tecnológico
+
+- **Framework:** Angular 15
+- **Estilos:** CSS3 / Variables de Diseño Globales / Interacciones UI Premium
+- **Toolkit de Interfaz:** PrimeNG + PrimeIcons
+- **Reproductor Multimedia:** Video.js
+- **Reactividad:** RxJS, Zone.js
+
+---
+
+## 🔧 Requisitos Previos
+
+- Node.js >= 16
+- Angular CLI >= 15
+
+---
+
+## ▶️ Ejecución en Local
+
+Sigue estos pasos para levantar el entorno de desarrollo del frontend en tu máquina local:
 
 ```bash
-# Clonar repositorio
-git clone https://github.com/Lorwik/Nehli-Front.git
-cd Nehli-Front
+# 1. Asegúrate de estar en el directorio del frontend
+cd frontend
 
-# Instalar dependencias
+# 2. Instalar todas las dependencias requeridas
 npm install
 
-# Levantar servidor de desarrollo
+# 3. Levantar el servidor de desarrollo en vivo de Angular
 npm start
 ```
 
-La aplicación estará disponible en `http://localhost:4200/`.
+Una vez que compile y arranque, la aplicación abrirá su servidor y estará disponible habitualmente en `http://localhost:4200/`. La pantalla de desarrollo recargará automáticamente el navegador si realizas cambios y guardas en el código fuente.
 
 ---
 
-## 🛠️ Scripts disponibles
+## 🛠️ Scripts de Ayuda Disponibles
 
-- `npm start` → inicia servidor de desarrollo.  
-- `npm run build` → compila la aplicación para producción.  
-- `npm test` → ejecuta los tests unitarios.  
+Dentro del directorio del frontend, están habilitados los siguientes comandos en el archivo package.json:
 
----
-
-## 🔗 Repos relacionados
-
-- [Nehli Backend](https://github.com/Lorwik/Nehli-Backend)  
+- `npm start` → Inicia el servidor de desarrollo local con Angular CLI.
+- `npm run build` → Compila toda la aplicación y genera los estáticos de producción (en una carpeta `dist/`).
+- `npm test` → Ejecuta la suite de pruebas y tests unitarios configurados (Karma/Jasmine).
 
 ---
 
-## 📌 Estado del proyecto
+## 🔗 Redirecciones Rápidas
 
-Este repositorio corresponde al **frontend** y está en desarrollo.  
-El objetivo final es disponer de una **plataforma de streaming** con gestión de usuarios, listas de reproducción y reproducción multimedia bajo demanda.
-
----
-
-## 📄 Licencia
-
-MIT
+- [🏠 Volver al README Principal](../README.md)
+- [⚙️ Ir al README del Backend](../backend/README.md)
