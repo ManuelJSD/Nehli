@@ -1,112 +1,370 @@
-.loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+/* ============================================
+   Nehli Browser — Catálogo Cinematográfico
+   ============================================ */
+
+:host {
+  --neh-bg-deep: #07090f;
+  --neh-accent: #4f8aff;
+  --neh-accent-glow: rgba(79, 138, 255, 0.35);
+  --neh-text: #e6edf8;
+  --neh-text-muted: #8899b2;
+  --neh-glass: rgba(13, 17, 23, 0.55);
+  --neh-glass-border: rgba(255, 255, 255, 0.06);
+  --neh-radius: 12px;
+  --neh-font-display: 'Outfit', sans-serif;
+  --neh-font-body: 'DM Sans', sans-serif;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap');
+
+/* ---------- Animaciones ---------- */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   Estado de carga
+   ============================================ */
+.browser-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.loading-pulse {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.loading-text {
+  font-family: var(--neh-font-body);
+  color: var(--neh-text-muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.03em;
+  animation: pulse 2s ease-in-out infinite;
+  margin: 0;
+}
+
+/* ============================================
+   Estado de error
+   ============================================ */
+.browser-error {
   display: flex;
   justify-content: center;
-  align-items: center;
-  z-index: 10000;
+  padding: 4rem 2rem;
 }
 
-.loading-overlay i {
+.error-card {
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.error-icon {
   font-size: 3rem;
-  color: white;
+  color: #f0614e;
+  margin-bottom: 1rem;
+  display: block;
 }
 
-.thumbnail-container {
+/* ============================================
+   Catálogo principal
+   ============================================ */
+.browser-catalog {
+  font-family: var(--neh-font-body);
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2.5rem 4rem;
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* ---------- Header del catálogo ---------- */
+.catalog-header {
+  padding: 2rem 0 1rem;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.catalog-title {
+  font-family: var(--neh-font-display);
+  font-weight: 800;
+  font-size: 2.2rem;
+  color: #fff;
+  margin: 0 0 0.3rem;
+  letter-spacing: -0.02em;
+}
+
+.catalog-subtitle {
+  font-size: 0.9rem;
+  color: var(--neh-text-muted);
+  margin: 0;
+}
+
+/* ============================================
+   Secciones de categoría
+   ============================================ */
+.category-section {
+  margin-top: 2.5rem;
+  animation: fadeInUp 0.5s ease-out both;
+}
+
+.category-section:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.category-section:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.category-section:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.category-section:nth-child(5) {
+  animation-delay: 0.25s;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.category-accent {
+  width: 4px;
+  height: 1.5rem;
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--neh-accent), #6366f1);
+  flex-shrink: 0;
+}
+
+.category-title {
+  font-family: var(--neh-font-display);
+  font-weight: 600;
+  font-size: 1.35rem;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.category-count {
+  font-size: 0.78rem;
+  color: var(--neh-text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--neh-glass-border);
+  border-radius: 100px;
+  padding: 0.2rem 0.7rem;
+  white-space: nowrap;
+}
+
+/* ============================================
+   Grid de tarjetas
+   ============================================ */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+
+/* ---------- Tarjeta individual ---------- */
+.video-card {
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--neh-radius);
+  overflow: hidden;
+  background: var(--neh-glass);
+  border: 1px solid var(--neh-glass-border);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: block;
+}
+
+.video-card:hover {
+  border-color: rgba(79, 138, 255, 0.2);
+  transform: translateY(-4px);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(79, 138, 255, 0.1);
+}
+
+/* ---------- Media (thumbnail) ---------- */
+.card-media {
   position: relative;
   width: 100%;
-  height: 0;
-  padding-bottom: 56.25%; /* establece la relación de aspecto de la imagen como 16:9 */
-  transition: transform 0.3s ease-out;
+  padding-bottom: 56.25%;
+  /* 16:9 */
+  overflow: hidden;
 }
 
-.thumbnail-image {
+.card-image {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease-out;
+  transition: transform 0.4s ease;
 }
 
-.thumbnail-text {
+.video-card:hover .card-image {
+  transform: scale(1.08);
+}
+
+/* Overlay al hover con botón play */
+.card-overlay {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
-  color: white;
-  font-size: 18px;
-  font-weight: bold;
-  padding: 10px;
-  box-sizing: border-box;
-  transition: transform 0.3s ease-out;
-  transform: translateY(100%);
-}
-
-.thumbnail-container:hover .thumbnail-image {
-  transform: scale(1.1);
-}
-
-.thumbnail-container:hover .thumbnail-text {
-  transform: translateY(0%);
-}
-
-.card-wrapper {
+  inset: 0;
+  background: linear-gradient(180deg,
+      transparent 40%,
+      rgba(7, 9, 15, 0.75) 100%);
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.card-row {
-  flex: 1 1 auto;
-  padding: 10px;
-  box-sizing: border-box;
-  max-width: calc(100% / 5 - 20px); /* Divide el ancho en 5 columnas, con un espacio de 20px entre cada tarjeta */
-  width: calc(100% / 5 - 20px); /* Evita que las tarjetas se expandan más allá del ancho máximo */
-  margin-top: 20px; /* Añade un margen superior de 20px */
-  margin-bottom: 20px; /* Añade un margen inferior de 20px */
+.video-card:hover .card-overlay {
+  opacity: 1;
 }
 
-.card-container {
-  margin-left: 100px;
+.play-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(79, 138, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px var(--neh-accent-glow);
+  transform: scale(0.8);
+  transition: transform 0.3s ease;
 }
 
-h2 {
-  padding-top: 20px;
+.video-card:hover .play-button {
+  transform: scale(1);
 }
 
-.lista {
-  padding-bottom: 100px;
+.play-button i {
+  font-size: 1.4rem;
+  color: #fff;
+  margin-left: 2px;
+  /* Compensación visual del icono play */
 }
+
+/* ---------- Info de la tarjeta ---------- */
+.card-info {
+  padding: 0.75rem 0.85rem;
+}
+
+.card-title {
+  font-family: var(--neh-font-display);
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: var(--neh-text);
+  margin: 0;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.video-card:hover .card-title {
+  color: #fff;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
 
 @media only screen and (max-width: 1200px) {
-  .card-row {
-    max-width: calc(100% / 4 - 20px); /* Divide el ancho en 4 columnas */
-    width: calc(100% / 4 - 20px);
-    margin-top: 20px; /* Añade un margen superior de 20px */
-    margin-bottom: 20px; /* Añade un margen inferior de 20px */
+  .cards-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
 @media only screen and (max-width: 992px) {
-  .card-row {
-    max-width: calc(100% / 3 - 20px); /* Divide el ancho en 3 columnas */
-    width: calc(100% / 3 - 20px);
-    margin-top: 20px; /* Añade un margen superior de 20px */
-    margin-bottom: 20px; /* Añade un margen inferior de 20px */
+  .cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .browser-catalog {
+    padding: 0 1.5rem 3rem;
+  }
+
+  .catalog-title {
+    font-size: 1.8rem;
   }
 }
 
 @media only screen and (max-width: 768px) {
-  .card-row {
-    max-width: calc(100% / 2 - 20px); /* Divide el ancho en 2 columnas */
-    width: calc(100% / 2 - 20px);
-    margin-top: 20px; /* Añade un margen superior de 20px */
-    margin-bottom: 20px; /* Añade un margen inferior de 20px */
+  .cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .browser-catalog {
+    padding: 0 1rem 2.5rem;
+  }
+
+  .catalog-title {
+    font-size: 1.5rem;
+  }
+
+  .category-title {
+    font-size: 1.15rem;
+  }
+}
+
+@media only screen and (max-width: 480px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+    max-width: 360px;
+  }
+
+  .catalog-header {
+    padding: 1.5rem 0 0.5rem;
+  }
+
+  .catalog-title {
+    font-size: 1.35rem;
+  }
+
+  .category-count {
+    display: none;
   }
 }

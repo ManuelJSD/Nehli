@@ -1,26 +1,70 @@
-<p-blockUI [blocked]="isLoading">
-
-  <div class="loading-overlay">
-    <p-progressSpinner styleClass="w-4rem h-4rem" strokeWidth="8" fill="var(--surface-ground)"
-      animationDuration="1s"></p-progressSpinner>
+<!-- Estado de carga -->
+<div class="browser-loading" *ngIf="isLoading">
+  <div class="loading-pulse">
+    <p-progressSpinner
+      styleClass="w-4rem h-4rem"
+      strokeWidth="6"
+      fill="transparent"
+      animationDuration="1s">
+    </p-progressSpinner>
+    <p class="loading-text">Cargando tu biblioteca...</p>
   </div>
-</p-blockUI>
-
-<div *ngIf="isError">
-  <p-messages [value]="messages" [enableService]="false" [closable]="false"></p-messages>
 </div>
 
-<div class="lista" *ngIf="!isLoading && !isError">
-  <div class="card-container" *ngFor="let category of getObjectKeys(videos)">
-    <h2>{{ category }}</h2>
-    <div class="card-wrapper">
-      <div class="card-row" *ngFor="let subcategory of getObjectKeys(videos[category])">
-        <div class="thumbnail-container"
-          [routerLink]="['/videos', category, subcategory, videos[category][subcategory].videos[0]]">
-          <img class="thumbnail-image" [src]="getImageUrl(category, subcategory)" (error)="onThumbnailError($event)" />
-          <div class="thumbnail-text">{{ subcategory | slice:0:26 }}</div>
-        </div>
-      </div>
-    </div>
+<!-- Estado de error -->
+<div class="browser-error" *ngIf="isError">
+  <div class="error-card">
+    <i class="pi pi-exclamation-triangle error-icon"></i>
+    <p-messages [value]="messages" [enableService]="false" [closable]="false"></p-messages>
   </div>
+</div>
+
+<!-- Catálogo de videos -->
+<div class="browser-catalog" *ngIf="!isLoading && !isError">
+
+  <!-- Header del catálogo -->
+  <header class="catalog-header">
+    <h1 class="catalog-title">Tu Biblioteca</h1>
+    <p class="catalog-subtitle">{{ categoryKeys.length }} categorías disponibles</p>
+  </header>
+
+  <!-- Secciones por categoría -->
+  <section
+    class="category-section"
+    *ngFor="let category of categoryKeys; trackBy: trackByKey">
+
+    <div class="category-header">
+      <div class="category-accent"></div>
+      <h2 class="category-title">{{ category }}</h2>
+      <span class="category-count">{{ subcategoryKeysMap[category]?.length || 0 }} títulos</span>
+    </div>
+
+    <div class="cards-grid">
+      <a
+        class="video-card"
+        *ngFor="let subcategory of subcategoryKeysMap[category]; trackBy: trackByKey"
+        [routerLink]="['/videos', category, subcategory, videos[category][subcategory].videos[0]]">
+
+        <!-- Thumbnail con ratio 16:9 -->
+        <div class="card-media">
+          <img
+            class="card-image"
+            [src]="getImageUrl(category, subcategory)"
+            (error)="onThumbnailError($event)"
+            [alt]="subcategory"
+            loading="lazy">
+          <div class="card-overlay">
+            <div class="play-button">
+              <i class="pi pi-play-circle"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="card-info">
+          <h3 class="card-title">{{ subcategory }}</h3>
+        </div>
+      </a>
+    </div>
+  </section>
 </div>
