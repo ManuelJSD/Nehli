@@ -1,0 +1,44 @@
+# ============================================
+# Nehli — .gitignore raíz
+# ============================================
+
+# Dependencias
+node_modules/
+
+# Variables de entorno (pueden contener secretos)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Compilados / Build
+dist/
+tmp/
+out-tsc/
+build/
+
+# Caché
+.angular/cache
+.sass-cache/
+
+# IDEs y editores
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+*.sublime-project
+.history/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
