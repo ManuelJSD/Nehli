@@ -1,34 +1,74 @@
-<div class="container text-layout">
-  <div class="titulo">
-    <h2>Generos de {{selectedGenero.name}}</h2>
+<div class="neh-page anime-page">
+  <!-- Header -->
+  <header class="page-header">
+    <h1 class="neh-page-title">Géneros de Anime</h1>
+    <p class="neh-page-subtitle">Explora animes por género</p>
+  </header>
 
-    <p-dropdown [options]="generos" (onChange)="obtenerGenero()" [(ngModel)]="selectedGenero"
-      optionLabel="name"></p-dropdown>
+  <!-- Controles -->
+  <div class="controls-bar">
+    <div class="control-group">
+      <label for="genero-dropdown" class="control-label">
+        <i class="pi pi-tag"></i>
+        Género
+      </label>
+      <p-dropdown id="genero-dropdown" [options]="generos" (onChange)="obtenerGenero()" [(ngModel)]="selectedGenero"
+        optionLabel="name" styleClass="neh-dropdown"></p-dropdown>
+    </div>
   </div>
 
-  <div class="p-grid p-justify-center p-d-flex">
+  <!-- Subtítulo dinámico -->
+  <div class="neh-section-header" *ngIf="generosAnime.length > 0" style="margin-top: 2rem;">
+    <div class="neh-section-accent"></div>
+    <h2 class="neh-section-title">{{ selectedGenero.name }}</h2>
+    <span class="neh-badge">{{ generosAnime.length }} resultados</span>
+  </div>
 
-    <div class="tarjeta-container p-col-12 p-md-6 p-lg-4 p-xl-3" *ngFor="let genero of generosAnime;">
+  <!-- Grid -->
+  <div class="anime-grid">
+    <div class="anime-grid-item" *ngFor="let genero of generosAnime">
       <app-tarjetas
-        [data]="{ imagen:  genero.images['jpg'].image_url, titulo: genero.title, episodios: genero.episodes, puntuacion: genero.score, url: genero.url }">
+        [data]="{
+          imagen: genero.images['jpg'].image_url,
+          titulo: genero.title,
+          episodios: genero.episodes,
+          puntuacion: genero.score,
+          url: genero.url
+        }">
       </app-tarjetas>
-
-    </div>
-
-  </div>
-
-  <div class="btn-toolbar justify-content-center mb-4" role="toolbar" aria-label="Toolbar with button groups">
-    <div class="btn-group me-2" role="group" aria-label="First group">
-      <button type="button" *ngIf="(paginaActual - 2) > 0" (click)="especificarPagina(paginaActual - 2)"
-        class="btn btn-secondary">{{ paginaActual - 2 }}</button>
-      <button type="button" *ngIf="(paginaActual - 1) > 0" (click)="especificarPagina(paginaActual - 1)"
-        class="btn btn-secondary">{{ paginaActual - 1 }}</button>
-      <button type="button" (click)="especificarPagina(paginaActual)" class="btn btn-info">{{ paginaActual }}</button>
-      <button type="button" *ngIf="(paginaActual + 1) < PagGenero" (click)="especificarPagina(paginaActual + 1)"
-          class="btn btn-primary">{{ paginaActual + 1 }}</button>
-        <button type="button" *ngIf="(paginaActual + 2) < PagGenero" (click)="especificarPagina(paginaActual + 2)"
-          class="btn btn-primary">{{ paginaActual + 2}}</button>
     </div>
   </div>
 
+  <!-- Paginación -->
+  <nav class="pagination" *ngIf="PagGenero > 1" aria-label="Paginación de géneros">
+    <button pButton pRipple
+      *ngIf="(paginaActual - 2) > 0"
+      (click)="especificarPagina(paginaActual - 2)"
+      [label]="(paginaActual - 2).toString()"
+      class="page-btn">
+    </button>
+    <button pButton pRipple
+      *ngIf="(paginaActual - 1) > 0"
+      (click)="especificarPagina(paginaActual - 1)"
+      [label]="(paginaActual - 1).toString()"
+      class="page-btn">
+    </button>
+    <button pButton pRipple
+      (click)="especificarPagina(paginaActual)"
+      [label]="paginaActual.toString()"
+      class="page-btn active">
+    </button>
+    <button pButton pRipple
+      *ngIf="(paginaActual + 1) < PagGenero"
+      (click)="especificarPagina(paginaActual + 1)"
+      [label]="(paginaActual + 1).toString()"
+      class="page-btn">
+    </button>
+    <button pButton pRipple
+      *ngIf="(paginaActual + 2) < PagGenero"
+      (click)="especificarPagina(paginaActual + 2)"
+      [label]="(paginaActual + 2).toString()"
+      class="page-btn">
+    </button>
+  </nav>
 </div>

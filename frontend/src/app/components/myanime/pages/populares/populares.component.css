@@ -1,52 +1,74 @@
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 9999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* ============================================
+   Nehli Populares — Grid Premium
+   ============================================ */
+
+.anime-page {
+  padding-top: 2rem;
 }
 
-.titulo {
-  margin-left: 150px;
+.page-header {
+  margin-bottom: 2rem;
+  animation: neh-fadeInUp 0.5s ease-out;
 }
 
-.p-d-flex {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+/* ---------- Grid ---------- */
+.anime-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1.25rem;
+  animation: neh-fadeIn 0.5s ease-out 0.15s both;
 }
 
-.tarjeta-container {
-  max-width: 300px;
-  margin: 10px;
-  flex-basis: calc(33.33% - 20px);
+.anime-grid-item {
+  animation: neh-fadeInUp 0.4s ease-out both;
 }
 
+/* Animaciones escalonadas para las primeras tarjetas */
+.anime-grid-item:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.anime-grid-item:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.anime-grid-item:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.anime-grid-item:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.anime-grid-item:nth-child(5) {
+  animation-delay: 0.25s;
+}
+
+/* ---------- Responsive ---------- */
 @media screen and (max-width: 1200px) {
-  .tarjeta-container {
-    width: 25%;
+  .anime-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
 @media screen and (max-width: 992px) {
-  .tarjeta-container {
-    width: 33.33%;
+  .anime-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
   }
 }
 
 @media screen and (max-width: 768px) {
-  .tarjeta-container {
-    width: 50%;
+  .anime-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
   }
 }
 
-@media screen and (max-width: 576px) {
-  .tarjeta-container {
-    width: 100%;
+@media screen and (max-width: 480px) {
+  .anime-grid {
+    grid-template-columns: 1fr;
+    max-width: 300px;
+    margin: 0 auto;
   }
 }

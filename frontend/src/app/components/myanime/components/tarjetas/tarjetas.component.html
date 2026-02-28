@@ -1,16 +1,31 @@
-<p-card subheader="{{data.titulo}}" styleClass="tarjeta">
-    <ng-template pTemplate="header">
-        <img [src]="data.imagen" class="card-img-top img-carta" alt="data.titulo">
-    </ng-template>
+<article class="anime-card">
+  <!-- Imagen -->
+  <div class="card-media">
+    <img [src]="data.imagen" [alt]="data.titulo" class="card-image" loading="lazy">
+    <div class="card-overlay"></div>
+  </div>
 
-    <ng-template pTemplate="content">
-        <b>Episodios:</b> {{ data.episodios }} <br />
-        <b>Puntuación:</b> {{ data.puntuacion }}
-    </ng-template>
+  <!-- Info -->
+  <div class="card-body">
+    <h3 class="card-title">{{ data.titulo }}</h3>
 
-    <ng-template pTemplate="footer">
-        <a href="{{ data.url }}" target="_blank">
-            <p-button label="Más" icon="pi pi-external-link"></p-button>
-        </a>
-    </ng-template>
-</p-card>
+    <div class="card-meta">
+      <div class="meta-item">
+        <i class="pi pi-video"></i>
+        <span>{{ data.episodios ?? '?' }} eps</span>
+      </div>
+      <div class="meta-item meta-score" *ngIf="data.puntuacion">
+        <i class="pi pi-star-fill"></i>
+        <span>{{ data.puntuacion }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="card-footer">
+    <a [href]="data.url" target="_blank" rel="noopener noreferrer" class="card-link">
+      <i class="pi pi-external-link"></i>
+      <span>Ver más</span>
+    </a>
+  </div>
+</article>

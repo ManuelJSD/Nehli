@@ -14,14 +14,17 @@ export class PopularesComponent implements OnInit {
   constructor(private MyanimeService: MyanimeService) { }
 
   ngOnInit(): void {
-    this.MyanimeService.obtenerPopulares().subscribe(
-      (populares: Datum[]) => {
+    this.MyanimeService.obtenerPopulares().subscribe({
+      next: (populares: Datum[]) => {
         this.populares = populares;
       },
-      (error) => {
-        console.log(error);
+      error: () => {
+        this.populares = [];
       }
-    );
+    });
   }
 
+  trackByTitle(index: number, item: Datum): string {
+    return item.title;
+  }
 }

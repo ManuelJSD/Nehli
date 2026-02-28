@@ -1,66 +1,153 @@
-.botones {
-  cursor: pointer;
+/* ============================================
+   Nehli Géneros — Controles + Grid + Paginación
+   ============================================ */
+
+.anime-page {
+  padding-top: 2rem;
 }
 
-a {
-  text-decoration: none;
-  text-align: center;
+.page-header {
+  margin-bottom: 1.5rem;
+  animation: neh-fadeInUp 0.5s ease-out;
 }
 
-.titulo {
-  margin-left: 150px;
-  margin-top: 50px;
-}
-
-.btn-group {
-  margin-top: 20px;
-}
-
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 9999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.p-d-flex {
+/* ---------- Controles ---------- */
+.controls-bar {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--neh-glass);
+  border: 1px solid var(--neh-glass-border);
+  border-radius: var(--neh-radius);
+  animation: neh-fadeInUp 0.5s ease-out 0.1s both;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.control-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--neh-text-muted);
+}
+
+.control-label i {
+  color: var(--neh-accent);
+  font-size: 0.85rem;
+}
+
+/* Dropdown */
+:host ::ng-deep .neh-dropdown .p-dropdown {
+  background: var(--neh-input-bg) !important;
+  border: 1px solid var(--neh-input-border) !important;
+  border-radius: var(--neh-radius-sm) !important;
+  color: var(--neh-text) !important;
+}
+
+:host ::ng-deep .neh-dropdown .p-dropdown:hover {
+  border-color: var(--neh-accent) !important;
+}
+
+:host ::ng-deep .neh-dropdown .p-dropdown-panel {
+  background: var(--neh-bg-surface) !important;
+  border: 1px solid var(--neh-glass-border) !important;
+  border-radius: var(--neh-radius-sm) !important;
+}
+
+:host ::ng-deep .neh-dropdown .p-dropdown-item {
+  color: var(--neh-text-muted) !important;
+}
+
+:host ::ng-deep .neh-dropdown .p-dropdown-item:hover {
+  background: rgba(79, 138, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+/* ---------- Grid ---------- */
+.anime-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+  animation: neh-fadeIn 0.5s ease-out 0.2s both;
+}
+
+/* ---------- Paginación ---------- */
+.pagination {
+  display: flex;
   justify-content: center;
+  gap: 0.5rem;
+  margin-top: 2.5rem;
+  padding-bottom: 1rem;
+  animation: neh-fadeInUp 0.4s ease-out;
 }
 
-.tarjeta-container {
-  max-width: 300px;
-  margin: 10px;
-  flex-basis: calc(33.33% - 20px);
+:host ::ng-deep .page-btn.p-button {
+  background: var(--neh-glass) !important;
+  border: 1px solid var(--neh-glass-border) !important;
+  color: var(--neh-text-muted) !important;
+  border-radius: var(--neh-radius-sm) !important;
+  font-family: var(--neh-font-display) !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  min-width: 42px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  transition: all 0.25s ease !important;
 }
 
+:host ::ng-deep .page-btn.p-button:hover {
+  background: rgba(79, 138, 255, 0.08) !important;
+  border-color: var(--neh-accent) !important;
+  color: #fff !important;
+}
+
+:host ::ng-deep .page-btn.active.p-button {
+  background: var(--neh-accent-gradient) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px var(--neh-accent-glow) !important;
+}
+
+/* ---------- Responsive ---------- */
 @media screen and (max-width: 1200px) {
-  .tarjeta-container {
-    width: 25%;
+  .anime-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
 @media screen and (max-width: 992px) {
-  .tarjeta-container {
-    width: 33.33%;
+  .anime-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
   }
 }
 
 @media screen and (max-width: 768px) {
-  .tarjeta-container {
-    width: 50%;
+  .anime-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .controls-bar {
+    padding: 1rem;
+    gap: 1rem;
   }
 }
 
-@media screen and (max-width: 576px) {
-  .tarjeta-container {
-    width: 100%;
+@media screen and (max-width: 480px) {
+  .anime-grid {
+    grid-template-columns: 1fr;
+    max-width: 300px;
+    margin: 1.5rem auto 0;
   }
 }

@@ -1,61 +1,72 @@
-<p-blockUI [blocked]="isLoading">
-  <div class="loading-overlay">
-    <p-progressSpinner styleClass="w-4rem h-4rem" strokeWidth="8" fill="var(--surface-ground)"
-      animationDuration="1s"></p-progressSpinner>
+<!-- Estado de carga -->
+<div class="neh-loading" *ngIf="isLoading">
+  <div class="neh-loading-content">
+    <p-progressSpinner styleClass="w-4rem h-4rem" strokeWidth="6" fill="transparent" animationDuration="1s"></p-progressSpinner>
+    <p class="neh-loading-text">Cargando temporadas...</p>
   </div>
-</p-blockUI>
+</div>
 
-<div *ngIf="isError">
+<!-- Estado de error -->
+<div *ngIf="isError" class="neh-page" style="padding-top: 2rem;">
   <p-messages [value]="messages" [enableService]="false" [closable]="false"></p-messages>
 </div>
 
-<div class="container text-layout">
-  <div class="titulo">
-    <label for="tAnio">Selecciona año:</label>
+<!-- Contenido -->
+<div class="neh-page anime-page" *ngIf="!isLoading">
+  <header class="page-header">
+    <h1 class="neh-page-title">Temporadas de Anime</h1>
+    <p class="neh-page-subtitle">Explora los animes por temporada y año</p>
+  </header>
 
-    <div class="p-mb-3">
-      <p-dropdown [options]="anios" (onChange)="obtenerAnimes()" [(ngModel)]="anioSeleccionado"></p-dropdown>
+  <!-- Controles -->
+  <div class="controls-bar">
+    <div class="control-group">
+      <label for="anio-dropdown" class="control-label">
+        <i class="pi pi-calendar"></i>
+        Año
+      </label>
+      <p-dropdown id="anio-dropdown" [options]="anios" (onChange)="obtenerAnimes()" [(ngModel)]="anioSeleccionado" styleClass="neh-dropdown"></p-dropdown>
     </div>
 
-    <div class="btn-group" role="group">
-      <button pButton pRipple (click)="recibirTemp('winter')" class="p-button-sm p-button-primary">
-        Invierno
+    <div class="season-buttons">
+      <button pButton pRipple (click)="recibirTemp('winter')" class="season-btn season-winter"
+        [class.active]="temporada === 'winter'">
+        <i class="pi pi-cloud"></i> Invierno
       </button>
-      <button pButton pRipple (click)="recibirTemp('spring')" class="p-button-sm p-button-success">
-        Primavera
+      <button pButton pRipple (click)="recibirTemp('spring')" class="season-btn season-spring"
+        [class.active]="temporada === 'spring'">
+        <i class="pi pi-sun"></i> Primavera
       </button>
-      <button pButton pRipple (click)="recibirTemp('summer')" class="p-button-sm p-button-danger">
-        Verano
+      <button pButton pRipple (click)="recibirTemp('summer')" class="season-btn season-summer"
+        [class.active]="temporada === 'summer'">
+        <i class="pi pi-bolt"></i> Verano
       </button>
-      <button pButton pRipple (click)="recibirTemp('fall')" class="p-button-sm p-button-warning">
-        Otoño
+      <button pButton pRipple (click)="recibirTemp('fall')" class="season-btn season-fall"
+        [class.active]="temporada === 'fall'">
+        <i class="pi pi-palette"></i> Otoño
       </button>
     </div>
-    <h3>Temporadas {{ temporada }} {{ anioActual }}</h3>
   </div>
 
-  <div class="p-grid p-justify-center p-d-flex">
-    <ng-container *ngFor="let temp of Temporadas">
-      <div class="tarjeta-container p-col-12 p-md-6 p-lg-4 p-xl-3">
-        <p-card subheader="{{ temp.title }}" styleClass="tarjeta">
-          <ng-template pTemplate="header">
-            <img [src]="temp.images['jpg'].image_url" class="card-img-top img-carta" alt="{{ temp.title }}" />
-          </ng-template>
-          <p>
-            <b>Episodios:</b> {{ temp.episodes }}<br />
-            <b>Puntuación:</b> {{ temp.score }}<br />
-            <b>Género:</b>
-            <a *ngFor="let genero of temp.genres; let last = last">
-              {{ genero.name }}<ng-container *ngIf="!last">, </ng-container>
-            </a>
-          </p>
-          <ng-template pTemplate="footer">
-            <a href="{{ temp.url }}" target="_blank">
-              <p-button label="Más" icon="pi pi-external-link"></p-button>
-            </a>
-          </ng-template>
-        </p-card>
-      </div>
-    </ng-container>
+  <!-- Subtítulo dinámico -->
+  <div class="neh-section-header" *ngIf="Temporadas.length > 0" style="margin-top: 2rem;">
+    <div class="neh-section-accent"></div>
+    <h2 class="neh-section-title">{{ temporada | titlecase }} {{ anioActual }}</h2>
+    <span class="neh-badge">{{ Temporadas.length }} animes</span>
+  </div>
+
+  <!-- Grid -->
+  <div class="anime-grid">
+    <div class="anime-grid-item" *ngFor="let temp of Temporadas">
+      <app-tarjetas
+        [data]="{
+          imagen: temp.images['jpg'].image_url,
+          titulo: temp.title,
+          episodios: temp.episodes,
+          puntuacion: temp.score,
+          url: temp.url
+        }">
+      </app-tarjetas>
+    </div>
   </div>
 </div>

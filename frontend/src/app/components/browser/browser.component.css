@@ -1,66 +1,15 @@
 /* ============================================
-   Nehli Browser — Catálogo Cinematográfico
+   Nehli Browser — Catálogo
+   Hereda tokens globales de styles.css
    ============================================ */
 
-:host {
-  --neh-bg-deep: #07090f;
-  --neh-accent: #4f8aff;
-  --neh-accent-glow: rgba(79, 138, 255, 0.35);
-  --neh-text: #e6edf8;
-  --neh-text-muted: #8899b2;
-  --neh-glass: rgba(13, 17, 23, 0.55);
-  --neh-glass-border: rgba(255, 255, 255, 0.06);
-  --neh-radius: 12px;
-  --neh-font-display: 'Outfit', sans-serif;
-  --neh-font-body: 'DM Sans', sans-serif;
-}
-
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap');
-
-/* ---------- Animaciones ---------- */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-
-  50% {
-    opacity: 1;
-  }
-}
-
-/* ============================================
-   Estado de carga
-   ============================================ */
+/* ---------- Estado de carga ---------- */
 .browser-loading {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  animation: fadeIn 0.4s ease-out;
+  animation: neh-fadeIn 0.4s ease-out;
 }
 
 .loading-pulse {
@@ -75,13 +24,11 @@
   color: var(--neh-text-muted);
   font-size: 0.9rem;
   letter-spacing: 0.03em;
-  animation: pulse 2s ease-in-out infinite;
+  animation: neh-pulse 2s ease-in-out infinite;
   margin: 0;
 }
 
-/* ============================================
-   Estado de error
-   ============================================ */
+/* ---------- Estado de error ---------- */
 .browser-error {
   display: flex;
   justify-content: center;
@@ -92,31 +39,28 @@
   max-width: 500px;
   width: 100%;
   text-align: center;
-  animation: fadeInUp 0.5s ease-out;
+  animation: neh-fadeInUp 0.5s ease-out;
 }
 
 .error-icon {
   font-size: 3rem;
-  color: #f0614e;
+  color: var(--neh-accent-warm);
   margin-bottom: 1rem;
   display: block;
 }
 
-/* ============================================
-   Catálogo principal
-   ============================================ */
+/* ---------- Catálogo ---------- */
 .browser-catalog {
   font-family: var(--neh-font-body);
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 2.5rem 4rem;
-  animation: fadeIn 0.5s ease-out;
+  animation: neh-fadeIn 0.5s ease-out;
 }
 
-/* ---------- Header del catálogo ---------- */
 .catalog-header {
   padding: 2rem 0 1rem;
-  animation: fadeInUp 0.5s ease-out;
+  animation: neh-fadeInUp 0.5s ease-out;
 }
 
 .catalog-title {
@@ -134,12 +78,10 @@
   margin: 0;
 }
 
-/* ============================================
-   Secciones de categoría
-   ============================================ */
+/* ---------- Categorías ---------- */
 .category-section {
   margin-top: 2.5rem;
-  animation: fadeInUp 0.5s ease-out both;
+  animation: neh-fadeInUp 0.5s ease-out both;
 }
 
 .category-section:nth-child(2) {
@@ -169,7 +111,7 @@
   width: 4px;
   height: 1.5rem;
   border-radius: 4px;
-  background: linear-gradient(180deg, var(--neh-accent), #6366f1);
+  background: var(--neh-accent-gradient);
   flex-shrink: 0;
 }
 
@@ -179,7 +121,6 @@
   font-size: 1.35rem;
   color: #fff;
   margin: 0;
-  letter-spacing: -0.01em;
 }
 
 .category-count {
@@ -192,16 +133,13 @@
   white-space: nowrap;
 }
 
-/* ============================================
-   Grid de tarjetas
-   ============================================ */
+/* ---------- Grid ---------- */
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 1rem;
 }
 
-/* ---------- Tarjeta individual ---------- */
 .video-card {
   text-decoration: none;
   color: inherit;
@@ -215,19 +153,15 @@
 }
 
 .video-card:hover {
-  border-color: rgba(79, 138, 255, 0.2);
+  border-color: var(--neh-glass-border-hover);
   transform: translateY(-4px);
-  box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(79, 138, 255, 0.1);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(79, 138, 255, 0.1);
 }
 
-/* ---------- Media (thumbnail) ---------- */
 .card-media {
   position: relative;
   width: 100%;
   padding-bottom: 56.25%;
-  /* 16:9 */
   overflow: hidden;
 }
 
@@ -244,13 +178,10 @@
   transform: scale(1.08);
 }
 
-/* Overlay al hover con botón play */
 .card-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg,
-      transparent 40%,
-      rgba(7, 9, 15, 0.75) 100%);
+  background: linear-gradient(180deg, transparent 40%, rgba(7, 9, 15, 0.75) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -283,10 +214,8 @@
   font-size: 1.4rem;
   color: #fff;
   margin-left: 2px;
-  /* Compensación visual del icono play */
 }
 
-/* ---------- Info de la tarjeta ---------- */
 .card-info {
   padding: 0.75rem 0.85rem;
 }
@@ -307,10 +236,7 @@
   color: #fff;
 }
 
-/* ============================================
-   Responsive
-   ============================================ */
-
+/* ---------- Responsive ---------- */
 @media only screen and (max-width: 1200px) {
   .cards-grid {
     grid-template-columns: repeat(4, 1fr);

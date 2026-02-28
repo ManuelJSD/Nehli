@@ -1,8 +1,21 @@
-<div id="container">
-  <div id="video-container">
-    <video id="my-video" class="video-js"></video>
+<div class="video-page">
+  <!-- Reproductor -->
+  <div class="player-container">
+    <video id="my-video" class="video-js vjs-fluid"></video>
   </div>
-  <div id="list-container">
-    <p-listbox [options]="listVideos" [filter]="true" (onClick)="seleccionarCapitulo($event)"></p-listbox>
-  </div>
+
+  <!-- Lista de episodios -->
+  <aside class="episodes-panel">
+    <div class="panel-header">
+      <i class="pi pi-list"></i>
+      <span>Episodios</span>
+    </div>
+    <p-listbox
+      [options]="listVideos"
+      [filter]="true"
+      filterPlaceHolder="Buscar episodio..."
+      (onClick)="seleccionarCapitulo($event)"
+      styleClass="episodes-list">
+    </p-listbox>
+  </aside>
 </div>

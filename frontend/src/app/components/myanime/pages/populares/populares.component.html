@@ -1,10 +1,13 @@
-<div class="container text-layout">
-  <div class="titulo">
-    <h1>50 Animes más Populares</h1>
-  </div>
+<div class="neh-page anime-page">
+  <!-- Header -->
+  <header class="page-header">
+    <h1 class="neh-page-title">50 Animes más Populares</h1>
+    <p class="neh-page-subtitle">Ranking de los animes más populares según MyAnimeList</p>
+  </header>
 
-  <div class="p-d-flex p-flex-wrap p-jc-center">
-    <div class="p-mr-2 tarjeta-container" *ngFor="let popular of populares">
+  <!-- Grid de tarjetas -->
+  <div class="anime-grid">
+    <div class="anime-grid-item" *ngFor="let popular of populares; trackBy: trackByTitle">
       <app-tarjetas
         [data]="{
           imagen: popular.images['jpg'].image_url,
@@ -12,8 +15,8 @@
           episodios: popular.episodes,
           puntuacion: popular.score,
           url: popular.url
-        }"
-      ></app-tarjetas>
+        }">
+      </app-tarjetas>
     </div>
   </div>
 </div>

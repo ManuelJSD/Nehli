@@ -1,30 +1,17 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 
 @Component({
   selector: 'app-tarjetas',
   templateUrl: './tarjetas.component.html',
-  styles: [
-    `
-    a {
-      text-decoration:none;
-      text-align: center;
-    }
-  `
-  ]
+  styleUrls: ['./tarjetas.component.css']
 })
-export class TarjetasComponent implements OnInit {
+export class TarjetasComponent {
 
-  @Input()data!: {
+  @Input() data!: {
     imagen: string,
     titulo: string,
     episodios: number | null,
     puntuacion: number,
     url: string
   };
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
 }

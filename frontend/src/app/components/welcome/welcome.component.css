@@ -1,66 +1,44 @@
 /* ============================================
-   Nehli Welcome — Diseño Cinematográfico Oscuro
+   Nehli Welcome — Diseño Cinematográfico
+   Hereda tokens globales de styles.css
    ============================================ */
 
-/* ---------- Tokens de diseño ---------- */
-:host {
-  --neh-bg-deep: #07090f;
-  --neh-bg-surface: #0d1117;
-  --neh-accent: #4f8aff;
-  --neh-accent-glow: rgba(79, 138, 255, 0.35);
-  --neh-accent-warm: #f0614e;
-  --neh-text: #e6edf8;
-  --neh-text-muted: #8899b2;
-  --neh-glass: rgba(13, 17, 23, 0.55);
-  --neh-glass-border: rgba(255, 255, 255, 0.06);
-  --neh-radius: 16px;
-  --neh-font-display: 'Outfit', sans-serif;
-  --neh-font-body: 'DM Sans', sans-serif;
-}
-
-/* ---------- Google Fonts ---------- */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap');
-
-/* ---------- Animaciones ---------- */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(32px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes glowPulse {
-  0%, 100% {
-    opacity: 0.5;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: translate(-50%, -50%) scale(1.15);
-  }
-}
-
 @keyframes badgeShimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
 }
 
 @keyframes grain {
-  0%, 100% { transform: translate(0, 0); }
-  10%      { transform: translate(-5%, -10%); }
-  30%      { transform: translate(3%, -15%); }
-  50%      { transform: translate(12%, 9%); }
-  70%      { transform: translate(9%, 4%); }
-  90%      { transform: translate(-1%, 7%); }
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  10% {
+    transform: translate(-5%, -10%);
+  }
+
+  30% {
+    transform: translate(3%, -15%);
+  }
+
+  50% {
+    transform: translate(12%, 9%);
+  }
+
+  70% {
+    transform: translate(9%, 4%);
+  }
+
+  90% {
+    transform: translate(-1%, 7%);
+  }
 }
 
 /* ---------- Página base ---------- */
@@ -79,7 +57,6 @@
   overflow-x: hidden;
 }
 
-/* Overlay con gradiente cinematográfico (de oscuro a más oscuro abajo) */
 .bg-overlay {
   position: fixed;
   inset: 0;
@@ -88,13 +65,11 @@
       rgba(7, 9, 15, 0.45) 0%,
       rgba(7, 9, 15, 0.70) 40%,
       rgba(7, 9, 15, 0.92) 75%,
-      var(--neh-bg-deep) 100%
-    );
+      var(--neh-bg-deep) 100%);
   pointer-events: none;
   z-index: 1;
 }
 
-/* Textura de grano sutil */
 .bg-grain {
   position: fixed;
   inset: -50%;
@@ -115,7 +90,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 2.5rem;
-  animation: fadeIn 0.8s ease-out both;
+  animation: neh-fadeIn 0.8s ease-out both;
 }
 
 .logo {
@@ -135,13 +110,12 @@
   align-items: center;
 }
 
-/* Botón "Iniciar sesión" — outlined con glassmorphism */
 :host ::ng-deep .btn-login.p-button {
   background: var(--neh-glass) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   color: var(--neh-text) !important;
   backdrop-filter: blur(12px);
-  border-radius: 10px !important;
+  border-radius: var(--neh-radius-sm) !important;
   font-family: var(--neh-font-body) !important;
   font-weight: 500 !important;
   transition: all 0.25s ease !important;
@@ -153,12 +127,11 @@
   transform: translateY(-1px);
 }
 
-/* Botón "Crear cuenta" — accent sólido */
 :host ::ng-deep .btn-register.p-button {
   background: var(--neh-accent) !important;
   border: none !important;
   color: #fff !important;
-  border-radius: 10px !important;
+  border-radius: var(--neh-radius-sm) !important;
   font-family: var(--neh-font-body) !important;
   font-weight: 600 !important;
   box-shadow: 0 4px 20px var(--neh-accent-glow) !important;
@@ -166,7 +139,7 @@
 }
 
 :host ::ng-deep .btn-register.p-button:hover {
-  background: #6ba0ff !important;
+  background: var(--neh-accent-hover) !important;
   box-shadow: 0 6px 28px rgba(79, 138, 255, 0.5) !important;
   transform: translateY(-2px);
 }
@@ -187,7 +160,6 @@
   text-align: center;
 }
 
-/* Glow decorativo detrás del hero */
 .hero-glow {
   position: absolute;
   top: 35%;
@@ -199,10 +171,9 @@
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 5;
-  animation: glowPulse 6s ease-in-out infinite;
+  animation: neh-glowPulse 6s ease-in-out infinite;
 }
 
-/* Badge "Tu universo…" */
 .hero-badge {
   display: inline-block;
   padding: 0.5rem 1.25rem;
@@ -213,16 +184,9 @@
   text-transform: uppercase;
   color: var(--neh-accent);
   border: 1px solid rgba(79, 138, 255, 0.25);
-  background:
-    linear-gradient(90deg,
-      transparent 0%,
-      rgba(79, 138, 255, 0.08) 50%,
-      transparent 100%
-    );
+  background: linear-gradient(90deg, transparent 0%, rgba(79, 138, 255, 0.08) 50%, transparent 100%);
   background-size: 200% 100%;
-  animation:
-    fadeInUp 0.7s ease-out 0.2s both,
-    badgeShimmer 4s ease-in-out infinite;
+  animation: neh-fadeInUp 0.7s ease-out 0.2s both, badgeShimmer 4s ease-in-out infinite;
   margin-bottom: 2rem;
 }
 
@@ -234,7 +198,7 @@
   letter-spacing: -0.02em;
   color: #fff;
   margin: 0 0 1.5rem;
-  animation: fadeInUp 0.7s ease-out 0.35s both;
+  animation: neh-fadeInUp 0.7s ease-out 0.35s both;
 }
 
 .title-accent {
@@ -251,23 +215,22 @@
   color: var(--neh-text-muted);
   margin: 0 auto 2.5rem;
   max-width: 550px;
-  animation: fadeInUp 0.7s ease-out 0.5s both;
+  animation: neh-fadeInUp 0.7s ease-out 0.5s both;
 }
 
-/* Botones CTA del Hero */
 .hero-cta {
   display: flex;
   gap: 1rem;
   justify-content: center;
   flex-wrap: wrap;
-  animation: fadeInUp 0.7s ease-out 0.65s both;
+  animation: neh-fadeInUp 0.7s ease-out 0.65s both;
 }
 
 :host ::ng-deep .btn-cta.p-button {
-  background: linear-gradient(135deg, var(--neh-accent), #6366f1) !important;
+  background: var(--neh-accent-gradient) !important;
   border: none !important;
   color: #fff !important;
-  border-radius: 14px !important;
+  border-radius: var(--neh-radius) !important;
   font-family: var(--neh-font-display) !important;
   font-weight: 600 !important;
   font-size: 1.05rem !important;
@@ -285,7 +248,7 @@
   color: var(--neh-text-muted) !important;
   font-family: var(--neh-font-body) !important;
   font-weight: 500 !important;
-  border-radius: 14px !important;
+  border-radius: var(--neh-radius) !important;
   transition: all 0.25s ease !important;
 }
 
@@ -316,17 +279,28 @@
   text-align: center;
   backdrop-filter: blur(16px);
   transition: all 0.35s ease;
-  animation: fadeInUp 0.6s ease-out both;
+  animation: neh-fadeInUp 0.6s ease-out both;
 }
 
-.feature-card:nth-child(1) { animation-delay: 0.8s; }
-.feature-card:nth-child(2) { animation-delay: 0.9s; }
-.feature-card:nth-child(3) { animation-delay: 1.0s; }
-.feature-card:nth-child(4) { animation-delay: 1.1s; }
+.feature-card:nth-child(1) {
+  animation-delay: 0.8s;
+}
+
+.feature-card:nth-child(2) {
+  animation-delay: 0.9s;
+}
+
+.feature-card:nth-child(3) {
+  animation-delay: 1.0s;
+}
+
+.feature-card:nth-child(4) {
+  animation-delay: 1.1s;
+}
 
 .feature-card:hover {
   background: rgba(79, 138, 255, 0.06);
-  border-color: rgba(79, 138, 255, 0.2);
+  border-color: var(--neh-glass-border-hover);
   transform: translateY(-6px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
@@ -334,7 +308,7 @@
 .feature-icon {
   width: 52px;
   height: 52px;
-  border-radius: 14px;
+  border-radius: var(--neh-radius);
   background: linear-gradient(135deg, rgba(79, 138, 255, 0.15), rgba(99, 102, 241, 0.10));
   display: flex;
   align-items: center;
@@ -373,20 +347,17 @@
   z-index: 10;
   text-align: center;
   padding: 2rem;
-  color: rgba(255, 255, 255, 0.2);
+  color: var(--neh-text-dim);
   font-size: 0.8rem;
   letter-spacing: 0.04em;
-  animation: fadeIn 1s ease-out 1.3s both;
+  animation: neh-fadeIn 1s ease-out 1.3s both;
 }
 
 .welcome-footer p {
   margin: 0;
 }
 
-/* ============================================
-   Responsive
-   ============================================ */
-
+/* ---------- Responsive ---------- */
 @media screen and (max-width: 1024px) {
   .features {
     grid-template-columns: repeat(2, 1fr);
