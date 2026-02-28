@@ -36,7 +36,7 @@
     <div class="category-header">
       <div class="category-accent"></div>
       <h2 class="category-title">{{ category }}</h2>
-      <span class="category-count">{{ subcategoryKeysMap[category]?.length || 0 }} títulos</span>
+      <span class="category-count">{{ subcategoryKeysMap[category] ? subcategoryKeysMap[category].length : 0 }} títulos</span>
     </div>
 
     <div class="cards-grid">

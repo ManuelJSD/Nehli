@@ -1,65 +1,73 @@
-const express = require("express");
-const { loginCtrl, registerCtrl, listarCuentas, cambiarPassCtrl } = require("../controllers/auth")
+const express = require('express');
+const rateLimit = require('express-rate-limit');
+const { loginCtrl, registerCtrl, listarCuentas, cambiarPassCtrl } = require('../controllers/auth');
 const router = express.Router();
-const { validatorRegister, validatorLogin, validatorVerificacion } = require("../validators/auth");
+const { validatorRegister, validatorLogin, validatorCambiarPass } = require('../validators/auth');
 const authMiddleware = require('../middleware/session');
-const sendEmail = require('../controllers/mail');
+const checkRol = require('../middleware/rol');
+
+// ─── Rate Limiter específico para autenticación ──────────────────────────────
+// Máximo 10 intentos de login/register por IP en 15 minutos.
+// Mucho más restrictivo que el límite global para proteger contra fuerza bruta.
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiados intentos. Inténtalo de nuevo en 15 minutos.' },
+});
 
 /**
- * http://localhost:3001/api
- * 
- * Route register new user
  * @openapi
  * /auth/register:
- *      post:
- *          tags:
- *              - auth
- *          summary: "Register nuevo usario"
- *          description: "Esta ruta es para registrar un nuevo usuario"
- *          requestBody:
- *              content:
- *                  application/json:
- *                      schema:
- *                          $ref: "#/components/schemas/authRegister"
- *          responses:
- *                  '201':
- *                      description: El usuario se registra de manera correcta
- *                  '403':
- *                      description: Error por validacion
+ *   post:
+ *     tags:
+ *       - auth
+ *     summary: Registra un nuevo usuario
+ *     description: Crea una nueva cuenta. Limitado a 10 intentos por IP cada 15 minutos.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/authRegister"
+ *     responses:
+ *       '201':
+ *         description: Usuario registrado correctamente
+ *       '409':
+ *         description: El usuario o email ya existen
+ *       '429':
+ *         description: Demasiados intentos
  */
-router.post("/register", validatorRegister, registerCtrl);
+router.post('/register', authLimiter, validatorRegister, registerCtrl);
+
 /**
- * Login user
  * @openapi
  * /auth/login:
- *    post:
- *      tags:
- *        - auth
- *      summary: "Login user"
- *      description: Iniciar session a un nuevo usuario y obtener el token de sesión
- *      responses:
- *        '200':
- *          description: Retorna el objeto insertado en la coleccion.
- *        '422':
- *          description: Error de validacion.
- *      requestBody:
- *          content:
- *            application/json:
- *              schema:
- *                 $ref: "#/components/schemas/authLogin"
- *    responses:
- *      '201':
- *        description: Retorna el objeto insertado en la coleccion con stado '201'
- *      '403':
- *        description: No tiene permisos '403'
+ *   post:
+ *     tags:
+ *       - auth
+ *     summary: Inicia sesión y obtiene un token JWT
+ *     description: Devuelve un token válido por 12h. Limitado a 10 intentos por IP cada 15 minutos.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/authLogin"
+ *     responses:
+ *       '200':
+ *         description: Login correcto, devuelve token JWT
+ *       '401':
+ *         description: Credenciales incorrectas
+ *       '429':
+ *         description: Demasiados intentos
  */
-router.post("/login", validatorLogin, loginCtrl);
+router.post('/login', authLimiter, validatorLogin, loginCtrl);
 
 /**
  * @swagger
- * /cambiarpass:
+ * /auth/cambiarpass:
  *   post:
- *     summary: Cambia la contraseña del usuario actual
+ *     summary: Cambia la contraseña del usuario autenticado
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -68,49 +76,40 @@ router.post("/login", validatorLogin, loginCtrl);
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [old_password, new_password]
  *             properties:
  *               old_password:
  *                 type: string
- *                 description: Contraseña actual del usuario
+ *                 description: Contraseña actual
  *               new_password:
  *                 type: string
- *                 description: Nueva contraseña del usuario
- *             example:
- *               old_password: "passwordAnterior123"
- *               new_password: "nuevaContraseña123"
+ *                 description: Nueva contraseña
  *     responses:
  *       200:
  *         description: Contraseña actualizada correctamente
  *       401:
- *         description: Acceso no autorizado
+ *         description: Contraseña actual incorrecta
  *       500:
  *         description: Error interno del servidor
  */
-router.post("/cambiarpass", authMiddleware, cambiarPassCtrl);
+router.post('/cambiarpass', authMiddleware, validatorCambiarPass, cambiarPassCtrl);
 
 /**
  * @swagger
- * /listar:
+ * /auth/listar:
  *   get:
- *     summary: Obtiene una lista de cuentas de usuario
+ *     summary: Lista cuentas (solo admins)
  *     security:
  *       - bearerAuth: []
+ *     description: Devuelve id, username, role y createdAt — sin datos sensibles.
  *     responses:
  *       200:
- *         description: Lista de cuentas obtenida correctamente
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Cuenta'
+ *         description: Lista de cuentas
  *       401:
- *         description: Acceso no autorizado
- *       500:
- *         description: Error interno del servidor
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos de administrador
  */
-router.get("/listar", authMiddleware, listarCuentas);
-
-// router.post("/verificarcuenta", validatorVerificacion, verificarCuenta);
+router.get('/listar', authMiddleware, checkRol(['admin']), listarCuentas);
 
 module.exports = router;

@@ -6,11 +6,12 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 
 import { ComponentsModule } from './components/components.module';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AuthGuard } from './guards/auth-guard.guard';
 import { NoAuthGuard } from './guards/no-auth-guard.guard';
 import { MyanimeService } from './services/myanime.service';
 import { LoginService } from './services/login.service';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
 
 @NgModule({
   declarations: [
@@ -27,7 +28,8 @@ import { LoginService } from './services/login.service';
     AuthGuard,
     NoAuthGuard,
     MyanimeService,
-    LoginService
+    LoginService,
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
   ],
   bootstrap: [AppComponent]
 })

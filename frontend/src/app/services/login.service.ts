@@ -32,7 +32,7 @@ export class LoginService {
   }
 
   register(username: string, password: string, email: string) {
-    return this.http.post<any>(this.registroUrl, {username, email, password})
+    return this.http.post<any>(this.registroUrl, { username, email, password })
       .pipe(
         tap(() => {
           this.router.navigate(['/welcome']);
@@ -53,13 +53,26 @@ export class LoginService {
 
     const token = this.getToken();
 
-    //Comprobamos que el token tenga contenido.
-    if (token == "undefined") {
+    if (!token || token === "undefined") {
       return false;
     }
 
-    // Devuelve true si el token existe, de lo contrario devuelve false
-    return !!this.getToken();
+    try {
+      // Decodificar payload del JWT (parte 1 del array al dividir por el punto)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+
+      // Comprobar si la fecha de expiración es mayor que la fecha actual (payload.exp está en segundos, Date.now() en ms)
+      const isExpired = Date.now() >= payload.exp * 1000;
+
+      if (isExpired) {
+        this.logout(); // Limpiar el token si ya ha caducado
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error('Error al decodificar token JWT', e);
+      return false;
+    }
   }
 
   logout(): void {

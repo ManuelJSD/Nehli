@@ -1,37 +1,51 @@
 const fs = require('fs');
 const path = require('path');
 
-// const videoFolder = './videos';
-const videoFolder = "\\\\192.168.1.12\\home\\Torrents\\Completados"
-const categories = [ "Peliculas", "Series", "Animacion", "Anime" ]
+/**
+ * Carpeta raíz donde se organizan los videos por categoría.
+ * Configurada mediante la variable de entorno VIDEO_FOLDER.
+ * Categorías esperadas: Peliculas, Series, Animacion, Anime.
+ */
+const videoFolder = process.env.VIDEO_FOLDER || './videos';
+const categories = ['Peliculas', 'Series', 'Animacion', 'Anime'];
 
+/**
+ * Lee el sistema de archivos y construye un objeto con la estructura
+ * de categorías > subcategorías > { videos, thumbnails }.
+ * 
+ * NOTA: Usa operaciones síncronas del filesystem. Para producción con
+ * alta carga, considerar migrar a versiones async con caché en memoria.
+ * 
+ * @returns {{ [categoria: string]: { [titulo: string]: { videos: string[], thumbnails: string[] } } }}
+ */
 function getVideos() {
   const videos = {};
 
   categories.forEach(category => {
     const categoryPath = path.join(videoFolder, category);
 
-    // Leer cada subcarpeta de la categoría
+    // Si la carpeta de la categoría no existe, la omitimos sin crashear
+    if (!fs.existsSync(categoryPath)) {
+      console.warn(`Carpeta de categoría no encontrada: ${categoryPath}`);
+      return;
+    }
+
     const subcategories = fs.readdirSync(categoryPath);
 
     subcategories.forEach(subcategory => {
       const subcategoryPath = path.join(categoryPath, subcategory);
-
-      // Verificar si es un directorio antes de leer su contenido
       const isDirectory = fs.statSync(subcategoryPath).isDirectory();
 
       if (isDirectory) {
         const files = fs.readdirSync(subcategoryPath);
 
-        const videoFiles = files.filter(file => {
-          const extension = path.extname(file);
-          return ['.mp4', '.mkv', '.avi'].includes(extension);
-        });
+        const videoFiles = files.filter(file =>
+          ['.mp4', '.mkv', '.avi'].includes(path.extname(file).toLowerCase())
+        );
 
-        const thumbnailFiles = files.filter(file => {
-          const extension = path.extname(file);
-          return ['.jpg', '.jpeg', '.png', '.gif'].includes(extension);
-        });
+        const thumbnailFiles = files.filter(file =>
+          ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(path.extname(file).toLowerCase())
+        );
 
         if (videoFiles.length > 0) {
           videos[category] = videos[category] || {};
@@ -47,6 +61,4 @@ function getVideos() {
   return videos;
 }
 
-module.exports = {
-  getVideos
-};
+module.exports = { getVideos };
