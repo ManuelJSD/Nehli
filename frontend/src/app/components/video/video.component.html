@@ -1,21 +1,61 @@
-<div class="video-page">
-  <!-- Reproductor -->
-  <div class="player-container">
+<div class="commercial-layout">
+
+
+
+  <!-- Hero Section: El reproductor domina toda la parte superior -->
+  <div class="player-hero">
     <video id="my-video" class="video-js vjs-fluid"></video>
   </div>
 
-  <!-- Lista de episodios -->
-  <aside class="episodes-panel">
-    <div class="panel-header">
-      <i class="pi pi-list"></i>
-      <span>Episodios</span>
+  <!-- Contenedor de Detalles (Bajo el reproductor) -->
+  <div class="media-container">
+    
+    <!-- Metadatos y Acciones -->
+    <div class="media-header">
+      <div class="title-block">
+        <h1 class="media-title">{{ subcategory || category }}</h1>
+        <h3 class="media-episode" *ngIf="video">{{ video }}</h3>
+      </div>
+      
+      <!-- Selector de Audio Estático -->
+      <div class="audio-control-static" *ngIf="audios && audios.length > 1">
+        <i class="pi pi-comments"></i>
+        <p-dropdown 
+            id="audioSelect"
+            [options]="audios" 
+            [(ngModel)]="currentAudioIndex" 
+            optionLabel="title" 
+            optionValue="index"
+            appendTo="body"
+            (onChange)="cambiarAudioAudio($event)">
+            <ng-template let-audio pTemplate="item">
+                <div class="audio-item">
+                    <span>{{audio.title}}</span>
+                    <small *ngIf="audio.language">{{audio.language | uppercase}}</small>
+                </div>
+            </ng-template>
+        </p-dropdown>
+      </div>
     </div>
-    <p-listbox
-      [options]="listVideos"
-      [filter]="true"
-      filterPlaceHolder="Buscar episodio..."
-      (onClick)="seleccionarCapitulo($event)"
-      styleClass="episodes-list">
-    </p-listbox>
-  </aside>
+
+    <!-- Sección de Episodios (Full width, lista limpia) -->
+    <div class="episodes-section">
+      <div class="section-title">
+        <h2>Episodios</h2>
+        <div class="divider"></div>
+      </div>
+      
+      <div class="tree-container-commercial">
+        <p-tree 
+          [value]="filesTree" 
+          selectionMode="single" 
+          [(selection)]="selectedNode"
+          (onNodeSelect)="seleccionarCapitulo($event)"
+          [filter]="true" 
+          filterPlaceholder="Buscar episodio...">
+        </p-tree>
+      </div>
+    </div>
+
+  </div>
 </div>

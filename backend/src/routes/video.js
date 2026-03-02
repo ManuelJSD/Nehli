@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/session');
 const controller = require('../controllers/video');
+const thumbnailController = require('../controllers/thumbnail');
 
 /**
  * @swagger
@@ -36,5 +37,32 @@ router.get('/videos', authMiddleware, (req, res) => {
     res.status(500).json({ error: 'Error al obtener el catálogo de videos.' });
   }
 });
+
+/**
+ * @swagger
+ * /video/thumbnail:
+ *   get:
+ *     summary: Obtiene una redirección a la portada de un título externo
+ *     tags: [Videos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         required: true
+ *       - in: query
+ *         name: title
+ *         schema:
+ *           type: string
+ *         required: true
+ *     responses:
+ *       302:
+ *         description: Redirección a la imagen original
+ *       404:
+ *         description: No se encontró la imagen
+ */
+router.get('/thumbnail', thumbnailController.getThumbnail);
 
 module.exports = router;

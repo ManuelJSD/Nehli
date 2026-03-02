@@ -16,6 +16,8 @@ export class BrowserComponent implements OnInit {
   categoryKeys: string[] = [];
   /** Mapa de claves de subcategorías pre-calculadas por categoría */
   subcategoryKeysMap: Record<string, string[]> = {};
+  /** Caché para URLs de las miniaturas: rompe el bucle de cambios de Angular */
+  private thumbnailCache: Record<string, string> = {};
 
   isLoading = false;
   isError = false;
@@ -49,15 +51,53 @@ export class BrowserComponent implements OnInit {
   }
 
   getImageUrl(category: string, subcategory: string): string {
+    const cacheKey = `${category}-${subcategory}`;
+    if (this.thumbnailCache[cacheKey]) {
+      return this.thumbnailCache[cacheKey];
+    }
+
+    let urlToReturn = '';
     const thumbnails = this.videos[category]?.[subcategory]?.thumbnails;
     if (thumbnails && thumbnails[0]) {
-      return `${this.baseUrl}/ngNehli/videos/${category}/${subcategory}/${thumbnails[0]}`;
+      urlToReturn = `${this.baseUrl}/ngNehli/videos/${category}/${subcategory}/${thumbnails[0]}`;
+    } else {
+      // Si no hay miniatura local, pedimos al backend que busque una en bases de datos (APIs libres)
+      urlToReturn = `${this.baseUrl}/api/video/thumbnail?category=${encodeURIComponent(category)}&title=${encodeURIComponent(subcategory)}`;
     }
-    return 'assets/images/miniatura_default.webp';
+
+    // Guardar en caché antes de retornar para evitar que Angular reevalúe infinitamente
+    this.thumbnailCache[cacheKey] = urlToReturn;
+    return urlToReturn;
+  }
+
+  /**
+   * Busca recursivamente el primer video disponible en la jerarquía (útil si está en Temporada 1 > DVD 1)
+   */
+  getFirstVideoName(category: string, subcategory: string): string {
+    const node = this.videos[category]?.[subcategory];
+    if (!node) return 'unknown';
+    return this.findFirstVideoInTree(node);
+  }
+
+  private findFirstVideoInTree(node: any): string {
+    if (node.videos && node.videos.length > 0) {
+      return node.videos[0].name;
+    }
+    if (node.folders) {
+      for (const folderName in node.folders) {
+        const found = this.findFirstVideoInTree(node.folders[folderName]);
+        if (found) return found;
+      }
+    }
+    return '';
   }
 
   onThumbnailError(event: Event): void {
-    (event.target as HTMLImageElement).src = 'assets/images/miniatura_default.webp';
+    const imgElement = event.target as HTMLImageElement;
+    // Prevenir buble infinito si la imagen por defecto también falla
+    if (!imgElement.src.includes('miniatura_default.webp')) {
+      imgElement.src = 'assets/images/miniatura_default.webp';
+    }
   }
 
   /**

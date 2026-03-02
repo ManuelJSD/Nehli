@@ -26,8 +26,8 @@ const dbConnectMySql = async () => {
     console.log('MySQL: Conexión correcta.');
 
     const isProduction = process.env.NODE_ENV === 'production';
-    await sequelize.sync({ alter: !isProduction });
-    console.log(`Tablas sincronizadas (alter: ${!isProduction}).`);
+    await sequelize.sync({ alter: false });
+    console.log(`Tablas sincronizadas (alter: false).`);
 
   } catch (error) {
     console.error('MySQL: Error de conexión', error);

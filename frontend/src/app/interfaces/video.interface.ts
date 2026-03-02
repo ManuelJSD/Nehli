@@ -1,7 +1,8 @@
 export interface Video {
   [category: string]: {
     [subcategory: string]: {
-      videos: string[];
+      folders: any;
+      videos: { name: string; relPath: string }[];
       thumbnails: string[];
     };
   };

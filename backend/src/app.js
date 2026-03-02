@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config(); // Init 
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -9,30 +9,35 @@ const { dbConnectMySql } = require('./config/mysql');
 
 const app = express();
 
-// ─── Seguridad: Headers HTTP ─────────────────────────────────────────────────
-app.use(helmet());
-
 // ─── Seguridad: CORS con whitelist ───────────────────────────────────────────
-// Solo se aceptan peticiones desde los orígenes configurados en CORS_ORIGIN.
-// En desarrollo: http://localhost:4200
-// En producción: ajustar a la URL del frontend desplegado
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
   : ['http://localhost:4200'];
 
 const corsOptions = {
-  origin: (origin, callback) => {
-    // Permitir requests sin origin (ej: Swagger UI local, Postman)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+
+    if (process.env.CORS_ORIGIN === '*') {
+      return callback(null, true); // Permite cualquier origen (reflect origin)
+    }
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
     } else {
-      callback(new Error(`CORS: Origen no permitido — ${origin}`));
+      return callback(new Error(`CORS: Origen no permitido — ${origin}`));
     }
   },
   credentials: true,
+  optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
+
+// ─── Seguridad: Headers HTTP ─────────────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 // ─── Parseo de JSON ───────────────────────────────────────────────────────────
 app.use(express.json());

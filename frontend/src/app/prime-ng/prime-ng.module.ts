@@ -11,6 +11,8 @@ import { MessagesModule } from 'primeng/messages';
 import { BlockUIModule } from 'primeng/blockui';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ListboxModule } from 'primeng/listbox';
+import { DropdownModule } from 'primeng/dropdown';
+import { TreeModule } from 'primeng/tree';
 
 @NgModule({
   declarations: [],
@@ -24,7 +26,9 @@ import { ListboxModule } from 'primeng/listbox';
     MessagesModule,
     BlockUIModule,
     ProgressSpinnerModule,
-    ListboxModule
+    ListboxModule,
+    DropdownModule,
+    TreeModule
   ],
   exports: [
     ButtonModule,
@@ -36,7 +40,9 @@ import { ListboxModule } from 'primeng/listbox';
     MessagesModule,
     BlockUIModule,
     ProgressSpinnerModule,
-    ListboxModule
+    ListboxModule,
+    DropdownModule,
+    TreeModule
   ]
 })
 export class PrimeNgModule { }

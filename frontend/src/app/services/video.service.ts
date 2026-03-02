@@ -23,4 +23,8 @@ export class VideoService {
       // tap(seriesData => console.log('Contenido de videos:', seriesData.videos)),
     );
   }
+
+  getVideoMetadata(path: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/api/stream/metadata?path=${encodeURIComponent(path)}`);
+  }
 }
