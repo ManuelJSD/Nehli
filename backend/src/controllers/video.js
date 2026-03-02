@@ -1,4 +1,5 @@
 const fs = require('fs');
+const fsp = fs.promises;
 const path = require('path');
 
 const videoFolder = process.env.VIDEO_FOLDER || './videos';
@@ -8,6 +9,7 @@ const categories = ['Peliculas', 'Series', 'Animacion', 'Anime'];
 let videoCache = null;
 let lastCacheTime = 0;
 const CACHE_TTL = 300000; // 5 minutos
+let isRefreshing = false; // Prevents overlapping background refreshes
 
 function isVideo(file) {
   return ['.mp4', '.mkv', '.avi'].includes(path.extname(file).toLowerCase());
@@ -18,23 +20,23 @@ function isImage(file) {
 }
 
 /**
- * Escanea recursivamente un directorio y devuelve estructura de árbol.
+ * Escanea recursivamente un directorio y devuelve estructura de árbol usando promesas.
  */
-function scanDirectory(dirPath) {
+async function scanDirectory(dirPath) {
   const result = {
     folders: {},
     videos: [],
     thumbnails: []
   };
 
-  const items = fs.readdirSync(dirPath);
+  const items = await fsp.readdir(dirPath);
 
-  items.forEach(item => {
+  const scanPromises = items.map(async (item) => {
     const itemPath = path.join(dirPath, item);
-    const stat = fs.statSync(itemPath);
+    const stat = await fsp.stat(itemPath);
 
     if (stat.isDirectory()) {
-      const subDirResult = scanDirectory(itemPath);
+      const subDirResult = await scanDirectory(itemPath);
       // Solo incluimos la carpeta si tiene videos en su interior (directos o en sub-ramas)
       if (subDirResult.videos.length > 0 || Object.keys(subDirResult.folders).length > 0) {
         result.folders[item] = subDirResult;
@@ -52,44 +54,80 @@ function scanDirectory(dirPath) {
     }
   });
 
+  await Promise.all(scanPromises);
   return result;
 }
 
 /**
- * Entregará todas las Categorías > Series > Árbol Recursivo
+ * Entregará todas las Categorías > Series > Árbol Recursivo generando de forma asíncrona
  */
-function getVideos() {
-  const now = Date.now();
-  if (videoCache && (now - lastCacheTime < CACHE_TTL)) {
-    return videoCache;
-  }
-
+async function generateVideoCatalog() {
   const videos = {};
 
-  categories.forEach(category => {
+  const categoryPromises = categories.map(async (category) => {
     const categoryPath = path.join(videoFolder, category);
 
-    if (!fs.existsSync(categoryPath)) {
-      return;
+    try {
+      await fsp.access(categoryPath); // Equivalente asíncrono a existsSync
+    } catch {
+      return; // El directorio no existe, saltamos
     }
 
-    const subcategories = fs.readdirSync(categoryPath);
+    const subcategories = await fsp.readdir(categoryPath);
 
-    subcategories.forEach(subcategory => {
+    const subcatPromises = subcategories.map(async (subcategory) => {
       const subcategoryPath = path.join(categoryPath, subcategory);
-      if (fs.statSync(subcategoryPath).isDirectory()) {
-        const content = scanDirectory(subcategoryPath);
+      const stat = await fsp.stat(subcategoryPath);
+
+      if (stat.isDirectory()) {
+        const content = await scanDirectory(subcategoryPath);
         if (content.videos.length > 0 || Object.keys(content.folders).length > 0) {
-          videos[category] = videos[category] || {};
+          if (!videos[category]) videos[category] = {};
           videos[category][subcategory] = content;
         }
       }
     });
+
+    await Promise.all(subcatPromises);
   });
 
-  videoCache = videos;
-  lastCacheTime = now;
+  await Promise.all(categoryPromises);
   return videos;
+}
+
+/**
+ * Función principal para obtener videos utilizando caché con Stale-While-Revalidate
+ */
+async function getVideos() {
+  const now = Date.now();
+
+  // 1. Caché válida y reciente -> Inmediato
+  if (videoCache && (now - lastCacheTime < CACHE_TTL)) {
+    return videoCache;
+  }
+
+  // 2. Caché caducada pero existe -> Retornamos caché vieja y lanzamos refresco en background
+  if (videoCache && (now - lastCacheTime >= CACHE_TTL)) {
+    if (!isRefreshing) {
+      isRefreshing = true;
+      generateVideoCatalog().then(newVideos => {
+        videoCache = newVideos;
+        lastCacheTime = Date.now();
+        isRefreshing = false;
+        console.log("[Catálogo Video] Caché revalidada y actualizada en segundo plano.");
+      }).catch(err => {
+        console.error("[Catálogo Video] Error actualizando la caché:", err);
+        isRefreshing = false;
+      });
+    }
+    return videoCache;
+  }
+
+  // 3. Sin caché (Primer arranque estricto) -> Esperamos al cálculo
+  const newVideos = await generateVideoCatalog();
+  videoCache = newVideos;
+  lastCacheTime = now;
+  return videoCache;
 }
 
 module.exports = { getVideos };

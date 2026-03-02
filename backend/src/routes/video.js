@@ -28,9 +28,9 @@ const thumbnailController = require('../controllers/thumbnail');
  *       401:
  *         description: No autenticado
  */
-router.get('/videos', authMiddleware, (req, res) => {
+router.get('/videos', authMiddleware, async (req, res) => {
   try {
-    const videos = controller.getVideos();
+    const videos = await controller.getVideos();
     res.json(videos);
   } catch (error) {
     console.error('Error al obtener videos:', error);
