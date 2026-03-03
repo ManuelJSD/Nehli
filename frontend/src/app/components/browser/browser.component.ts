@@ -23,6 +23,13 @@ export class BrowserComponent implements OnInit {
   isError = false;
   messages: Message[] = [];
 
+  // Variables para el Hero y Modal
+  heroVideo: any = null;
+  displayModal: boolean = false;
+  selectedVideoInfo: any = null;
+  selectedCategory: string = '';
+  selectedSubcategory: string = '';
+
   private baseUrl: string = environments.baseURL;
 
   constructor(private videoService: VideoService) { }
@@ -36,6 +43,25 @@ export class BrowserComponent implements OnInit {
         this.categoryKeys.forEach(cat => {
           this.subcategoryKeysMap[cat] = Object.keys(videos[cat]);
         });
+
+        // Seleccionar video destacado (Hero Video)
+        if (this.categoryKeys.length > 0) {
+          const firstCat = this.categoryKeys[0];
+          const subs = this.subcategoryKeysMap[firstCat];
+          if (subs && subs.length > 0) {
+            const firstSub = subs[0];
+            this.heroVideo = {
+              category: firstCat,
+              title: firstSub,
+              imageUrl: this.getImageUrl(firstCat, firstSub)
+            };
+            // Cargar info del hero asíncronamente
+            this.videoService.getVideoInfo(firstCat, firstSub).subscribe(info => {
+              if (this.heroVideo) this.heroVideo.info = info;
+            });
+          }
+        }
+
         this.isLoading = false;
       },
       error: () => {
@@ -98,6 +124,38 @@ export class BrowserComponent implements OnInit {
     if (!imgElement.src.includes('miniatura_default.webp')) {
       imgElement.src = 'assets/images/miniatura_default.webp';
     }
+  }
+
+  onVideoClick(category: string, subcategory: string): void {
+    this.selectedCategory = category;
+    this.selectedSubcategory = subcategory;
+    this.displayModal = true;
+    this.selectedVideoInfo = null; // Loading state
+
+    this.videoService.getVideoInfo(category, subcategory).subscribe({
+      next: (info) => {
+        // Combinamos la info de la API externa con nuestra URL de Play
+        this.selectedVideoInfo = {
+          ...info,
+          playUrl: ['/videos', category, subcategory, this.getFirstVideoName(category, subcategory)],
+          // Fallback a imagen default si no hay
+          coverUrl: info.coverUrl || this.getImageUrl(category, subcategory)
+        };
+      },
+      error: () => {
+        // En caso de error, poner valores por defecto para permitir reproducir igualmente
+        this.selectedVideoInfo = {
+          title: subcategory,
+          synopsis: 'Información no disponible.',
+          playUrl: ['/videos', category, subcategory, this.getFirstVideoName(category, subcategory)],
+          coverUrl: this.getImageUrl(category, subcategory)
+        };
+      }
+    });
+  }
+
+  closeModal(): void {
+    this.displayModal = false;
   }
 
   /**

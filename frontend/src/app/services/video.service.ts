@@ -27,4 +27,8 @@ export class VideoService {
   getVideoMetadata(path: string): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/api/stream/metadata?path=${encodeURIComponent(path)}`);
   }
+
+  getVideoInfo(category: string, title: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/api/video/info?category=${encodeURIComponent(category)}&title=${encodeURIComponent(title)}`);
+  }
 }

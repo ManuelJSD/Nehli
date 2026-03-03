@@ -2,6 +2,7 @@ const https = require('https');
 
 // Caché en memoria para no saturar las APIs
 const thumbnailCache = new Map();
+const infoCache = new Map();
 
 /**
  * Función genérica para hacer peticiones HTTP GET y parsear como JSON
@@ -60,6 +61,69 @@ function fetchAnilist(title) {
                         const parsed = JSON.parse(body);
                         if (parsed.data && parsed.data.Media && parsed.data.Media.coverImage) {
                             resolve(parsed.data.Media.coverImage.extraLarge || parsed.data.Media.coverImage.large);
+                        } else {
+                            resolve(null);
+                        }
+                    } catch (e) { resolve(null); }
+                } else {
+                    resolve(null);
+                }
+            });
+        });
+
+        req.on('error', (e) => resolve(null));
+        req.write(data);
+        req.end();
+    });
+}
+
+/**
+ * Función genérica para hacer peticiones GraphQL a AniList y traer Metadata completa
+ */
+function fetchAnilistInfo(title) {
+    return new Promise((resolve) => {
+        const query = `
+        query ($search: String) {
+            Media (search: $search, type: ANIME) {
+                description
+                seasonYear
+                averageScore
+                genres
+                coverImage { extraLarge large medium }
+            }
+        }`;
+
+        const data = JSON.stringify({ query, variables: { search: title } });
+
+        const options = {
+            hostname: 'graphql.anilist.co',
+            port: 443,
+            path: '/',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': data.length,
+                'Accept': 'application/json'
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            let body = '';
+            res.on('data', chunk => body += chunk);
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    try {
+                        const parsed = JSON.parse(body);
+                        if (parsed.data && parsed.data.Media) {
+                            const media = parsed.data.Media;
+                            resolve({
+                                title: title,
+                                synopsis: media.description ? media.description.replace(/<[^>]*>?/gm, '') : 'Sin sinopsis disponible.',
+                                year: media.seasonYear || null,
+                                rating: media.averageScore ? (media.averageScore / 10).toFixed(1) : null,
+                                genres: media.genres || [],
+                                coverUrl: media.coverImage ? (media.coverImage.extraLarge || media.coverImage.large) : null
+                            });
                         } else {
                             resolve(null);
                         }
@@ -191,4 +255,111 @@ const getThumbnail = async (req, res) => {
     }
 };
 
-module.exports = { getThumbnail };
+/**
+ * Obtiene la metadata consultando APIs gratuitas.
+ */
+async function fetchInfoMetadata(category, rawTitle) {
+    const title = cleanTitle(rawTitle);
+    const cacheKey = `${category}-${title}-info`;
+
+    if (infoCache.has(cacheKey)) {
+        return infoCache.get(cacheKey);
+    }
+
+    let metadata = {
+        title: rawTitle,
+        synopsis: 'Sin información disponible.',
+        year: null,
+        rating: null,
+        genres: [],
+        coverUrl: null
+    };
+
+    let foundInfo = false;
+
+    if (category === 'Anime') {
+        const aniData = await fetchAnilistInfo(title);
+        if (aniData) {
+            metadata = { ...metadata, ...aniData };
+            foundInfo = true;
+        } else {
+            try {
+                const itunesData = await fetchJSON(`https://itunes.apple.com/search?media=tvShow&term=${encodeURIComponent(title)}&limit=1`);
+                if (itunesData && itunesData.results && itunesData.results.length > 0) {
+                    const res = itunesData.results[0];
+                    metadata.synopsis = res.longDescription || res.description || metadata.synopsis;
+                    metadata.year = res.releaseDate ? res.releaseDate.substring(0, 4) : null;
+                    metadata.genres = res.primaryGenreName ? [res.primaryGenreName] : [];
+                    metadata.coverUrl = res.artworkUrl100 ? res.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg') : null;
+                    foundInfo = true;
+                }
+            } catch (e) { console.error('iTunes fallback failed:', e.message); }
+        }
+    }
+    else if (category === 'Series') {
+        try {
+            const tvmazeData = await fetchJSON(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(title)}`);
+            if (tvmazeData && tvmazeData.length > 0) {
+                const show = tvmazeData[0].show;
+                metadata.synopsis = show.summary ? show.summary.replace(/<[^>]*>?/gm, '') : metadata.synopsis;
+                metadata.year = show.premiered ? show.premiered.substring(0, 4) : null;
+                metadata.rating = show.rating?.average || null;
+                metadata.genres = show.genres || [];
+                metadata.coverUrl = show.image?.original || show.image?.medium || null;
+                foundInfo = true;
+            }
+        } catch (e) { console.error('TVMaze failed:', e.message); }
+
+        if (!foundInfo) {
+            try {
+                const itunesData = await fetchJSON(`https://itunes.apple.com/search?media=tvShow&term=${encodeURIComponent(title)}&limit=1`);
+                if (itunesData && itunesData.results && itunesData.results.length > 0) {
+                    const res = itunesData.results[0];
+                    metadata.synopsis = res.longDescription || res.description || metadata.synopsis;
+                    metadata.year = res.releaseDate ? res.releaseDate.substring(0, 4) : null;
+                    metadata.genres = res.primaryGenreName ? [res.primaryGenreName] : [];
+                    metadata.coverUrl = res.artworkUrl100 ? res.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg') : null;
+                    foundInfo = true;
+                }
+            } catch (e) { console.error('iTunes fallback failed:', e.message); }
+        }
+    }
+    else if (category === 'Peliculas' || category === 'Animacion') {
+        try {
+            const itunesData = await fetchJSON(`https://itunes.apple.com/search?media=movie&term=${encodeURIComponent(title)}&limit=1`);
+            const esData = await fetchJSON(`https://itunes.apple.com/search?media=movie&term=${encodeURIComponent(title)}&country=es&lang=es_es&limit=1`);
+
+            // Prioridad a los resultados en español
+            const bestRes = (esData && esData.results && esData.results.length > 0) ? esData.results[0] :
+                (itunesData && itunesData.results && itunesData.results.length > 0) ? itunesData.results[0] : null;
+
+            if (bestRes) {
+                metadata.synopsis = bestRes.longDescription || bestRes.description || metadata.synopsis;
+                metadata.year = bestRes.releaseDate ? bestRes.releaseDate.substring(0, 4) : null;
+                metadata.genres = bestRes.primaryGenreName ? [bestRes.primaryGenreName] : [];
+                metadata.coverUrl = bestRes.artworkUrl100 ? bestRes.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg') : null;
+                foundInfo = true;
+            }
+        } catch (e) { console.error('iTunes movie failed:', e.message); }
+    }
+
+    infoCache.set(cacheKey, metadata);
+    return metadata;
+}
+
+/**
+ * Controlador para la ruta GET /video/info
+ */
+const getInfo = async (req, res) => {
+    const { category, title } = req.query;
+
+    if (!category || !title) {
+        return res.status(400).json({ error: 'Faltan parámetros category y title' });
+    }
+
+    const metadata = await fetchInfoMetadata(category, title);
+
+    res.json(metadata);
+};
+
+module.exports = { getThumbnail, getInfo };

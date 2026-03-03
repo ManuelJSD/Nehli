@@ -65,4 +65,29 @@ router.get('/videos', authMiddleware, async (req, res) => {
  */
 router.get('/thumbnail', thumbnailController.getThumbnail);
 
+/**
+ * @swagger
+ * /video/info:
+ *   get:
+ *     summary: Obtiene la metadata extendida de un título
+ *     tags: [Videos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         required: true
+ *       - in: query
+ *         name: title
+ *         schema:
+ *           type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Objeto con la información de la película/serie
+ */
+router.get('/info', authMiddleware, thumbnailController.getInfo);
+
 module.exports = router;

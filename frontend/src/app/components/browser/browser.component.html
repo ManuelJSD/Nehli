@@ -20,51 +20,103 @@
 </div>
 
 <!-- Catálogo de videos -->
-<div class="browser-catalog" *ngIf="!isLoading && !isError">
+<div class="browser-wrapper" *ngIf="!isLoading && !isError">
 
-  <!-- Header del catálogo -->
-  <header class="catalog-header">
-    <h1 class="catalog-title">Tu Biblioteca</h1>
-    <p class="catalog-subtitle">{{ categoryKeys.length }} categorías disponibles</p>
-  </header>
+  <!-- Hero Section -->
+  <div class="hero-section" *ngIf="heroVideo">
+    <div class="hero-background">
+      <img [src]="heroVideo.imageUrl" [alt]="heroVideo.title" (error)="onThumbnailError($event)">
+      <div class="hero-vignette"></div>
+      <div class="hero-vignette-bottom"></div>
+    </div>
+    <div class="hero-content">
+      <span class="hero-badge" *ngIf="heroVideo.category">{{ heroVideo.category | uppercase }}</span>
+      <h1 class="hero-title">{{ heroVideo.title }}</h1>
+      <p class="hero-synopsis">{{ heroVideo.info?.synopsis || 'Explora este título destacado en nuestra biblioteca. Haz clic en Más Información para descubrir los detalles.' }}</p>
+      
+      <div class="hero-actions">
+        <a class="btn-primary" [routerLink]="['/videos', heroVideo.category, heroVideo.title, getFirstVideoName(heroVideo.category, heroVideo.title)]">
+          <i class="pi pi-play-fill" style="margin-right: 8px;"></i> Reproducir
+        </a>
+        <button class="btn-secondary" (click)="onVideoClick(heroVideo.category, heroVideo.title)">
+          <i class="pi pi-info-circle" style="margin-right: 8px;"></i> Más información
+        </button>
+      </div>
+    </div>
+  </div>
 
-  <!-- Secciones por categoría -->
-  <section
-    class="category-section"
-    *ngFor="let category of categoryKeys; trackBy: trackByKey">
+  <!-- Grid Completa por Categoría -->
+  <div class="catalog-content">
+    <section class="category-row" *ngFor="let category of categoryKeys">
+      <h2 class="row-title">{{ category }}</h2>
+      
+      <div class="row-slider">
+        <div class="video-card" *ngFor="let subcategory of subcategoryKeysMap[category]" (click)="onVideoClick(category, subcategory)">
+          <div class="card-media">
+            <img class="card-image" [src]="getImageUrl(category, subcategory)" (error)="onThumbnailError($event)" [alt]="subcategory" loading="lazy">
+            <div class="card-overlay">
+              <i class="pi pi-play play-icon"></i>
+            </div>
+          </div>
+          <div class="card-info">
+            <h3 class="card-title" [title]="subcategory">{{ subcategory }}</h3>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
 
-    <div class="category-header">
-      <div class="category-accent"></div>
-      <h2 class="category-title">{{ category }}</h2>
-      <span class="category-count">{{ subcategoryKeysMap[category] ? subcategoryKeysMap[category].length : 0 }} títulos</span>
+<!-- INFO MODAL (Custom) -->
+<div class="custom-modal-overlay" *ngIf="displayModal" (click)="closeModal()" [class.active]="displayModal">
+  <div class="custom-modal" (click)="$event.stopPropagation()">
+    <!-- Botón Cerrar -->
+    <button class="modal-close" (click)="closeModal()">
+      <i class="pi pi-times"></i>
+    </button>
+    
+    <!-- Loading State del Modal -->
+    <div class="modal-loading" *ngIf="!selectedVideoInfo">
+      <p-progressSpinner styleClass="w-3rem h-3rem" strokeWidth="4"></p-progressSpinner>
     </div>
 
-    <div class="cards-grid">
-      <a
-        class="video-card"
-        *ngFor="let subcategory of subcategoryKeysMap[category]; trackBy: trackByKey"
-        [routerLink]="['/videos', category, subcategory, getFirstVideoName(category, subcategory)]">
-
-        <!-- Thumbnail con ratio 16:9 -->
-        <div class="card-media">
-          <img
-            class="card-image"
-            [src]="getImageUrl(category, subcategory)"
-            (error)="onThumbnailError($event)"
-            [alt]="subcategory"
-            loading="lazy">
-          <div class="card-overlay">
-            <div class="play-button">
-              <i class="pi pi-play-circle"></i>
+    <!-- Contenido del Modal -->
+    <div class="modal-content-wrapper" *ngIf="selectedVideoInfo">
+      <div class="modal-hero">
+        <img [src]="selectedVideoInfo.coverUrl" class="modal-hero-bg" (error)="onThumbnailError($event)">
+        <div class="modal-hero-vignette"></div>
+        <div class="modal-hero-text">
+          <h2 class="modal-title">{{ selectedVideoInfo.title }}</h2>
+          <div class="modal-meta">
+            <span class="meta-item match-score" *ngIf="selectedVideoInfo.rating">{{ selectedVideoInfo.rating * 10 }}% para ti</span>
+            <span class="meta-item year" *ngIf="selectedVideoInfo.year">{{ selectedVideoInfo.year }}</span>
+            <span class="meta-item hd-badge">HD</span>
+          </div>
+          <div class="modal-hero-actions">
+            <a class="btn-primary modal-play-btn" [routerLink]="selectedVideoInfo.playUrl" (click)="closeModal()">
+              <i class="pi pi-play-fill" style="margin-right: 8px;"></i> Reproducir
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-body">
+        <div class="modal-details-grid">
+          <div class="modal-synopsis">
+            <p>{{ selectedVideoInfo.synopsis }}</p>
+          </div>
+          <div class="modal-sidebar">
+            <div class="sidebar-item" *ngIf="selectedVideoInfo.genres?.length">
+              <span class="sidebar-label">Géneros:</span>
+              <span class="sidebar-value">{{ selectedVideoInfo.genres.join(', ') }}</span>
+            </div>
+            <div class="sidebar-item" *ngIf="selectedVideoInfo.category">
+              <span class="sidebar-label">Categoría:</span>
+              <span class="sidebar-value">{{ selectedCategory }}</span>
             </div>
           </div>
         </div>
-
-        <!-- Info -->
-        <div class="card-info">
-          <h3 class="card-title">{{ subcategory }}</h3>
-        </div>
-      </a>
+      </div>
     </div>
-  </section>
+  </div>
 </div>

@@ -137,9 +137,19 @@ const getVideoMetadata = (req, res) => {
         output += data.toString();
     });
 
+    ffprobe.on('error', (err) => {
+        console.error('Error procesando ffprobe:', err.message);
+        if (!res.headersSent) {
+            return res.status(500).json({ error: 'ffprobe no está instalado o falló al ejecutarse', details: err.message });
+        }
+    });
+
     ffprobe.on('close', (code) => {
         if (code !== 0) {
-            return res.status(500).json({ error: 'Error al extraer metadatos de ffprobe' });
+            if (!res.headersSent) {
+                return res.status(500).json({ error: 'Error al extraer metadatos de ffprobe' });
+            }
+            return;
         }
 
         try {

@@ -2,7 +2,16 @@
    Nehli Navbar — Glassmorphism Premium
    ============================================ */
 
+:host {
+    display: block;
+    width: 100%;
+}
+
 :host ::ng-deep .p-menubar {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    /* Ensure it's above the browser content */
     background: var(--neh-glass-strong) !important;
     border: none !important;
     border-bottom: 1px solid var(--neh-glass-border) !important;
