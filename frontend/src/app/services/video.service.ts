@@ -31,4 +31,8 @@ export class VideoService {
   getVideoInfo(category: string, title: string): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/api/video/info?category=${encodeURIComponent(category)}&title=${encodeURIComponent(title)}`);
   }
+
+  getVideoDuration(path: string): Observable<{ duration: number }> {
+    return this.http.get<{ duration: number }>(`${this.apiUrl}/api/stream/duration?path=${encodeURIComponent(path)}`);
+  }
 }

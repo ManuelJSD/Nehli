@@ -4,6 +4,25 @@ const streamController = require('../controllers/stream');
 
 /**
  * @swagger
+ * /stream/duration:
+ *   get:
+ *     summary: Devuelve la duración en segundos de un archivo de video.
+ *     tags: [Videos]
+ *     parameters:
+ *       - in: query
+ *         name: path
+ *         required: true
+ *         description: Ruta relativa del video (URL-encoded)
+ *     responses:
+ *       200:
+ *         description: '{ duration: float }'
+ *       404:
+ *         description: Video no encontrado
+ */
+router.get('/duration', streamController.getVideoDuration);
+
+/**
+ * @swagger
  * /stream/{category}/{subcategory}/{video}:
  *   get:
  *     summary: Inicia el stream de video, convierte MKV a MP4 al vuelo si es necesario.

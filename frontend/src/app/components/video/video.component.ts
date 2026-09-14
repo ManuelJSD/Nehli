@@ -26,6 +26,9 @@ export class VideoComponent implements OnInit, OnDestroy {
   currentAudioIndex: string = '0'; // Pista de audio por defecto
 
   player: any;
+  isMkv: boolean = false;             // Indica si el video actual es MKV (stream generado)
+  videoDuration: number = 0;          // Duración real obtenida via ffprobe
+  private isSeeking: boolean = false; // Evita bucles de seeking infinitos
   private baseUrl: string = environments.baseURL;
 
   constructor(private route: ActivatedRoute, private videoService: VideoService) {
@@ -155,6 +158,9 @@ export class VideoComponent implements OnInit, OnDestroy {
   }
 
   reproducir() {
+    const ext = this.video.split('.').pop()?.toLowerCase() || '';
+    this.isMkv = ext === 'mkv';
+
     // Evitamos re-inicializar el reproductor si ya existe, solo cambiamos el src
     if (this.player) {
       this.videoExtension();
@@ -163,6 +169,10 @@ export class VideoComponent implements OnInit, OnDestroy {
         type: this.typeExtension
       });
       this.iniciarSubtitulos();
+      // Cargar la duración real si es MKV
+      if (this.isMkv) {
+        this.cargarDuracion();
+      }
       return;
     }
 
@@ -181,6 +191,134 @@ export class VideoComponent implements OnInit, OnDestroy {
 
     this.player.ready(() => {
       this.iniciarSubtitulos();
+
+      // Para MKV: inyectar duración y habilitar seeking por tiempo
+      if (this.isMkv) {
+        this.cargarDuracion();
+        this.registrarSeekHandler();
+      }
+    });
+  }
+
+  /**
+   * Llama al backend para obtener la duración exacta del video (vía ffprobe).
+   * Luego parchea el Tech de video.js para que siempre devuelva la duración real
+   * en lugar de Infinity (que es lo que reporta el navegador para un stream fragmentado).
+   */
+  cargarDuracion() {
+    this.videoService.getVideoDuration(this.videoRelPath).subscribe({
+      next: ({ duration }) => {
+        if (!this.player || duration <= 0) return;
+
+        this.videoDuration = duration;
+        this.aplicarDuracion();
+      },
+      error: (err) => {
+        console.warn('No se pudo obtener la duración del video:', err);
+      }
+    });
+  }
+
+  /**
+   * Parchea el Tech de video.js para interceptar la duración nativa.
+   * El navegador reporta Infinity para streams MP4 fragmentados;
+   * nosotros devolvemos la duración real obtenida via ffprobe.
+   *
+   * También escucha el evento 'durationchange' del Tech (nivel nativo)
+   * para re-inyectar la duración correcta en el caché del player sin
+   * crear un bucle infinito.
+   */
+  aplicarDuracion() {
+    if (!this.player || this.videoDuration <= 0) return;
+
+    try {
+      // Accedemos al tech de forma no segura (necesario para parchear)
+      const tech = this.player.tech({ IWillNotUseThisInPlugins: true });
+
+      if (tech) {
+        // Parche: sobrescribir duration() en el tech para devolver nuestra duración
+        // cuando el nativo reporta Infinity o NaN
+        const knownDuration = this.videoDuration;
+        const originalDuration = tech.duration.bind(tech);
+
+        tech.duration = () => {
+          const nativeDur = originalDuration();
+          return (!isFinite(nativeDur) || isNaN(nativeDur)) ? knownDuration : nativeDur;
+        };
+
+        // Interceptar el evento 'durationchange' del tech para actualizar el caché
+        // del player SIN pasar por handleTechDurationChange_ (que leería el nativo)
+        tech.off('durationchange'); // Quitar listener anterior si existía
+        tech.on('durationchange', () => {
+          // Evitar que el player lea el Infinity del elemento nativo
+          this.player.cache_.duration = knownDuration;
+          // Re-disparar el evento en el player para que la UI se actualice
+          this.player.trigger('durationchange');
+        });
+      }
+    } catch (e) {
+      // Fallback si el tech no es accesible
+      console.warn('No se pudo parchear el tech de video.js:', e);
+    }
+
+    // Forzar la actualización del caché y la barra de progreso
+    this.player.cache_.duration = this.videoDuration;
+    this.player.trigger('durationchange');
+  }
+
+  /**
+   * Registra un listener en el evento 'seeking' del player.
+   * Cuando el usuario arrastra la barra de progreso a un punto,
+   * reconstruimos la URL con ?start=segundos y recargamos el stream desde ahí.
+   */
+  registrarSeekHandler() {
+    this.player.on('seeking', () => {
+      // Evitar bucle: si nosotros mismos disparamos el seek, lo ignoramos
+      if (this.isSeeking) return;
+
+      const targetTime = this.player.currentTime();
+
+      // Solo hacer seek real si el punto solicitado no está en el buffer actual
+      const buffered = this.player.buffered();
+      let isInBuffer = false;
+      for (let i = 0; i < buffered.length; i++) {
+        if (targetTime >= buffered.start(i) && targetTime <= buffered.end(i)) {
+          isInBuffer = true;
+          break;
+        }
+      }
+
+      if (!isInBuffer) {
+        this.isSeeking = true;
+        this.seekToTime(targetTime);
+      }
+    });
+  }
+
+  /**
+   * Recarga el stream MKV desde un segundo específico.
+   * Construye la URL con ?start=segundos para que FFmpeg comience desde ese punto.
+   * Tras el cambio de src, re-aplica el parche de duración.
+   */
+  seekToTime(seconds: number) {
+    if (!this.player) return;
+
+    const encodedPath = encodeURIComponent(this.videoRelPath);
+    const seekUrl = `${this.baseUrl}/api/stream/play?path=${encodedPath}&audio=${this.currentAudioIndex}&start=${seconds.toFixed(3)}`;
+
+    this.player.src({
+      src: seekUrl,
+      type: 'video/mp4'
+    });
+
+    // Usamos 'loadedmetadata' (no 'ready') porque 'ready' puede no re-dispararse
+    // cuando solo cambia el src en un player ya inicializado
+    this.player.one('loadedmetadata', () => {
+      this.player.play();
+      this.isSeeking = false;
+      // Re-aplicar el parche de duración tras el cambio de src
+      // (el cambio de src reinicia los listeners nativos del tech)
+      this.aplicarDuracion();
     });
   }
 
@@ -229,6 +367,7 @@ export class VideoComponent implements OnInit, OnDestroy {
       this.video = node.data.name;
       this.videoRelPath = node.data.relPath;
       this.selectedNode = node;
+      this.videoDuration = 0; // Resetear duración al cambiar de capítulo
 
       // Al cambiar de capítulo, primero recargamos la metadata
       // cargarMetadata llamará a reproducir() automáticamente una vez finalice.
@@ -244,16 +383,20 @@ export class VideoComponent implements OnInit, OnDestroy {
     // Capturar tiempo actual
     const currentTime = this.player.currentTime();
 
-    // Al cambiar la extensión/URL, usamos el nuevo índice en la query string
-    this.videoExtension();
-
-    this.player.src({
-      src: this.videoUrl,
-      type: this.typeExtension
-    });
-
-    // Restaurar por donde iba y darle play
-    this.player.currentTime(currentTime);
-    this.player.play();
+    if (this.isMkv) {
+      // Para MKV: recargar el stream con la nueva pista de audio desde el segundo actual
+      this.isSeeking = true;
+      this.seekToTime(currentTime);
+    } else {
+      // Para MP4/WEBM: cambio directo de src con rangos HTTP
+      this.videoExtension();
+      this.player.src({
+        src: this.videoUrl,
+        type: this.typeExtension
+      });
+      // Restaurar por donde iba y darle play
+      this.player.currentTime(currentTime);
+      this.player.play();
+    }
   }
 }

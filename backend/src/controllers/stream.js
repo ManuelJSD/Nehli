@@ -34,15 +34,19 @@ const streamVideo = (req, res) => {
 
     if (isMkv) {
         // Para MKV, haremos remux en vivo a un formato MP4 fragmentado
+        // Soporte de seeking por tiempo: el cliente envía ?start=segundos
+        const startTime = parseFloat(req.query.start) || 0;
+        const audioTrack = req.query.audio ? req.query.audio : '0'; // Por defecto la primera pista de audio (0:a:0)
+
         res.writeHead(200, {
             'Content-Type': 'video/mp4',
             'Connection': 'keep-alive',
-            'Accept-Ranges': 'bytes'
+            'Accept-Ranges': 'none' // No soportamos byte-ranges en streams generados
         });
 
-        const audioTrack = req.query.audio ? req.query.audio : '0'; // Por defecto la primera pista de audio (0:a:0)
-
+        // Construimos los args de FFmpeg. El -ss ANTES del -i es seek rápido (input seeking)
         const ffmpegArgs = [
+            ...(startTime > 0 ? ['-ss', startTime.toFixed(3)] : []),
             '-i', videoPath,
             '-map', '0:v:0',               // Mapear solo el video principal
             '-map', `0:a:${audioTrack}`,   // Mapear solo el audio solicitado
@@ -230,4 +234,63 @@ const getSubtitle = (req, res) => {
     });
 };
 
-module.exports = { streamVideo, getVideoMetadata, getSubtitle };
+/**
+ * Devuelve la duración en segundos de cualquier archivo de video usando ffprobe.
+ * Responde: { duration: float }
+ */
+const getVideoDuration = (req, res) => {
+    const encodedPath = req.query.path;
+    if (!encodedPath) return res.status(400).json({ error: 'Falta el path del video' });
+
+    const relativePath = Buffer.from(encodedPath, 'base64').toString('utf8');
+
+    if (relativePath.includes('..')) {
+        return res.status(403).json({ error: 'Ruta no permitida' });
+    }
+
+    const videoPath = path.join(videoFolder, relativePath);
+
+    if (!fs.existsSync(videoPath)) {
+        return res.status(404).json({ error: 'Video no encontrado' });
+    }
+
+    const ffprobeArgs = [
+        '-v', 'quiet',
+        '-print_format', 'json',
+        '-show_entries', 'format=duration',
+        videoPath
+    ];
+
+    const ffprobe = spawn('ffprobe', ffprobeArgs);
+    let output = '';
+
+    ffprobe.stdout.on('data', (data) => {
+        output += data.toString();
+    });
+
+    ffprobe.on('error', (err) => {
+        console.error('Error en ffprobe (duration):', err.message);
+        if (!res.headersSent) {
+            return res.status(500).json({ error: 'ffprobe falló', details: err.message });
+        }
+    });
+
+    ffprobe.on('close', (code) => {
+        if (code !== 0) {
+            if (!res.headersSent) {
+                return res.status(500).json({ error: 'ffprobe terminó con error' });
+            }
+            return;
+        }
+
+        try {
+            const data = JSON.parse(output);
+            const duration = parseFloat(data?.format?.duration) || 0;
+            res.json({ duration });
+        } catch (error) {
+            res.status(500).json({ error: 'Error parseando duración', details: error.message });
+        }
+    });
+};
+
+module.exports = { streamVideo, getVideoMetadata, getSubtitle, getVideoDuration };

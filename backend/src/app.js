@@ -45,8 +45,8 @@ app.use(express.json());
 // ─── Seguridad: Rate Limiting global (anti-flood) ────────────────────────────
 // Límite general para toda la API: 200 peticiones por IP / 15 minutos
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
+  windowMs: 5 * 60 * 1000, // 5 minutos
+  max: 1000, // Límite incrementado a 1000 peticiones por IP cada 5 minutos
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Demasiadas peticiones. Inténtalo de nuevo más tarde.' },

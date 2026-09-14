@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Message } from 'primeng/api/message';
 import { Video } from 'src/app/interfaces/video.interface';
 import { VideoService } from 'src/app/services/video.service';
@@ -9,7 +9,7 @@ import { environments } from 'src/environments/environments';
   templateUrl: './browser.component.html',
   styleUrls: ['./browser.component.css']
 })
-export class BrowserComponent implements OnInit {
+export class BrowserComponent implements OnInit, OnDestroy {
 
   videos: Video = {};
   /** Claves de categorías pre-calculadas para evitar llamar Object.keys() en el template */
@@ -29,6 +29,7 @@ export class BrowserComponent implements OnInit {
   selectedVideoInfo: any = null;
   selectedCategory: string = '';
   selectedSubcategory: string = '';
+  private rotationInterval: any;
 
   private baseUrl: string = environments.baseURL;
 
@@ -44,23 +45,13 @@ export class BrowserComponent implements OnInit {
           this.subcategoryKeysMap[cat] = Object.keys(videos[cat]);
         });
 
-        // Seleccionar video destacado (Hero Video)
-        if (this.categoryKeys.length > 0) {
-          const firstCat = this.categoryKeys[0];
-          const subs = this.subcategoryKeysMap[firstCat];
-          if (subs && subs.length > 0) {
-            const firstSub = subs[0];
-            this.heroVideo = {
-              category: firstCat,
-              title: firstSub,
-              imageUrl: this.getImageUrl(firstCat, firstSub)
-            };
-            // Cargar info del hero asíncronamente
-            this.videoService.getVideoInfo(firstCat, firstSub).subscribe(info => {
-              if (this.heroVideo) this.heroVideo.info = info;
-            });
-          }
-        }
+        // Seleccionar video destacado aleatorio al inicio
+        this.setRandomHero();
+
+        // Configurar rotación cada 30 segundos
+        this.rotationInterval = setInterval(() => {
+          this.setRandomHero();
+        }, 30000);
 
         this.isLoading = false;
       },
@@ -164,5 +155,41 @@ export class BrowserComponent implements OnInit {
    */
   trackByKey(index: number, key: string): string {
     return key;
+  }
+
+  ngOnDestroy(): void {
+    if (this.rotationInterval) {
+      clearInterval(this.rotationInterval);
+    }
+  }
+
+  /**
+   * Selecciona un video completamente aleatorio del catálogo actual
+   */
+  private setRandomHero(): void {
+    if (this.categoryKeys.length === 0) return;
+
+    const randomCat = this.categoryKeys[Math.floor(Math.random() * this.categoryKeys.length)];
+    const subs = this.subcategoryKeysMap[randomCat];
+
+    if (subs && subs.length > 0) {
+      const randomSub = subs[Math.floor(Math.random() * subs.length)];
+
+      this.heroVideo = {
+        category: randomCat,
+        title: randomSub,
+        imageUrl: this.getImageUrl(randomCat, randomSub),
+        info: null // Reset info while loading new one
+      };
+
+      // Cargar info detallada del nuevo hero
+      this.videoService.getVideoInfo(randomCat, randomSub).subscribe({
+        next: (info) => {
+          if (this.heroVideo && this.heroVideo.title === randomSub) {
+            this.heroVideo.info = info;
+          }
+        }
+      });
+    }
   }
 }
