@@ -17,7 +17,7 @@
 
     <ng-container *ngIf="!isLoading && !isError">
       <section *ngIf="featured && !query.trim() && !selectedCategory" class="featured" aria-label="Título destacado">
-        <img class="featured-backdrop" [src]="featuredInfo?.coverUrl || featured.imageUrl" alt="" (error)="onThumbnailError($event)">
+        <img class="featured-backdrop" [src]="featured.imageUrl" alt="" (error)="onThumbnailError($event)">
         <div class="featured-copy">
           <span class="featured-category">{{ featured.category }}</span>
           <h2>{{ featuredInfo?.title || featured.title }}</h2>
@@ -66,7 +66,7 @@
     <button type="button" autofocus class="dialog-close" aria-label="Cerrar ficha" (click)="closeTitle()">
       <i class="pi pi-times" aria-hidden="true"></i>
     </button>
-    <img [src]="selectedInfo?.coverUrl || entry.imageUrl" alt="" (error)="onThumbnailError($event)">
+    <img [src]="entry.imageUrl" alt="" (error)="onThumbnailError($event)">
     <div class="dialog-copy">
       <span class="featured-category">{{ entry.category }}<ng-container *ngIf="selectedInfo?.year"> · {{ selectedInfo?.year }}</ng-container></span>
       <h2 id="title-dialog-heading">{{ selectedInfo?.title || entry.title }}</h2>

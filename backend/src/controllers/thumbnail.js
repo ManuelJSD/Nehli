@@ -4,7 +4,8 @@ const https = require('node:https');
 
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
-const { getVideos } = require('./video');
+const { getVideos, onCatalogRefresh } = require('./video');
+const disk = require('../utils/metadataCache');
 const runFile = promisify(execFile);
 const frameCache = new Map();
 const frameQueue = [];
@@ -241,9 +242,15 @@ async function captureFrame(filename) {
     return undefined;
 }
 
+let frameWakeup;
 function drainFrameQueue() {
     while (activeFrames < frameLimit && frameQueue.length) {
-        const { filename, resolve } = frameQueue.shift();
+        const index = frameQueue.findIndex(job => !job.background);
+        if (index < 0 && disk.playbackBusy()) {
+            if (!frameWakeup) frameWakeup = setTimeout(() => { frameWakeup = undefined; drainFrameQueue(); }, 2000).unref();
+            return;
+        }
+        const [{ filename, resolve }] = frameQueue.splice(Math.max(0, index), 1);
         activeFrames++;
         captureFrame(filename).then(resolve, () => resolve(undefined)).finally(() => {
             activeFrames--;
@@ -252,8 +259,8 @@ function drainFrameQueue() {
     }
 }
 
-async function fallbackFrame(category, title) {
-    const video = firstVideo((await getVideos())[category]?.[title]);
+async function fallbackFrame(category, title, entry, background = false) {
+    const video = firstVideo(entry || (await getVideos())[category]?.[title]);
     if (!video) return undefined;
     const root = await fs.realpath(library);
     const filename = await localFile(root, path.resolve(root, Buffer.from(video.relPath, 'base64').toString()));
@@ -261,12 +268,23 @@ async function fallbackFrame(category, title) {
     const stat = await fs.stat(filename);
     const key = JSON.stringify([filename, stat.size, stat.mtimeMs]);
     const cached = frameCache.get(key);
-    if (cached) return cached;
-    if (frameQueue.length >= 48) return undefined;
-    const result = new Promise(resolve => frameQueue.push({ filename, resolve }));
+    if (cached) {
+        if (!background) {
+            for (const job of frameQueue) {
+                if (job.filename === filename) job.background = false;
+            }
+            drainFrameQueue();
+        }
+        return cached;
+    }
+    const result = disk.load('jpg', key, Infinity, () => {
+        if (frameQueue.length >= 48) return undefined;
+        const frame = new Promise(resolve => frameQueue.push({ filename, resolve, background }));
+        drainFrameQueue();
+        return frame;
+    });
     frameCache.set(key, result);
     if (frameCache.size > 128) frameCache.delete(frameCache.keys().next().value);
-    drainFrameQueue();
     const frame = await result;
     if (!frame && frameCache.get(key) === result) frameCache.delete(key);
     return frame;
@@ -306,7 +324,15 @@ function externalMetadata(category, title, year) {
     const identity = titleIdentity(title);
     identity.year = year || identity.year;
     const entry = { expires: Infinity };
-    entry.result = resolveExternal(category, identity).catch(() => undefined).then(result => {
+    entry.result = (async () => {
+        const saved = await disk.read('json', key, 6 * 60 * 60 * 1000);
+        if (saved) {
+            try { return JSON.parse(saved.toString('utf8')); } catch {}
+        }
+        const result = await resolveExternal(category, identity).catch(() => undefined);
+        if (result) await disk.write('json', key, Buffer.from(JSON.stringify(result)));
+        return result;
+    })().then(result => {
         entry.expires = Date.now() + (result ? 6 * 60 * 60 * 1000 : 5 * 60 * 1000);
         return result;
     });
@@ -335,11 +361,95 @@ function validCover(url) {
     return typeof url === 'string' && /^https:\/\//i.test(url);
 }
 
+function downloadCover(value) {
+    let url;
+    try { url = new URL(value); } catch { return undefined; }
+    if (url.protocol !== 'https:' || url.port || url.username || url.password ||
+        !/^(?:s[0-9]+\.anilist\.co|static\.tvmaze\.com|(?:[a-z0-9-]+\.)?mzstatic\.com)$/i.test(url.hostname)) return undefined;
+
+    return new Promise(resolve => {
+        const req = https.get(url, response => {
+            const mime = response.headers['content-type']?.split(';')[0];
+            const formats = { 'image/jpeg': 1, 'image/png': 2, 'image/webp': 3, 'image/gif': 4 };
+            if (response.statusCode !== 200 || !formats[mime]) {
+                response.resume();
+                resolve(undefined);
+                return;
+            }
+            const chunks = [Buffer.from([formats[mime]])];
+            let size = 1;
+            response.on('data', chunk => {
+                size += chunk.length;
+                if (size > disk.maxBytes) req.destroy();
+                else chunks.push(chunk);
+            });
+            response.on('end', () => resolve(size > 1 && size <= disk.maxBytes ? Buffer.concat(chunks) : undefined));
+            response.on('error', () => resolve(undefined));
+        });
+        const deadline = setTimeout(() => req.destroy(), 4500);
+        req.on('error', () => resolve(undefined));
+        req.on('close', () => {
+            clearTimeout(deadline);
+            resolve(undefined);
+        });
+    });
+}
+
+let warming = false;
+let queuedCatalog;
+function prewarmCatalog(catalog) {
+    queuedCatalog = catalog;
+    if (!warming) void warm();
+}
+
+async function warm() {
+    warming = true;
+    try {
+        while (queuedCatalog) {
+            const catalog = queuedCatalog;
+            queuedCatalog = undefined;
+            for (const [category, titles] of Object.entries(catalog)) {
+                for (const [title, entry] of Object.entries(titles)) {
+                    while (disk.playbackBusy()) await pause(2000);
+                    try {
+                        const { fields, cover } = await readLocal(category, title);
+                        if (cover && fields?.synopsis) continue;
+                        const match = await externalMetadata(category, fields?.title || title, fields?.year);
+                        while (disk.playbackBusy()) await pause(2000);
+                        if (!cover) {
+                            if (validCover(match?.coverUrl)) {
+                                const cached = await disk.load('cover', match.coverUrl, 7 * 86400000, () => downloadCover(match.coverUrl));
+                                if (cached) continue;
+                            }
+                            await fallbackFrame(category, title, entry, true);
+                        }
+                    } catch {
+                        // Un título inaccesible no debe detener la preparación de la biblioteca.
+                    }
+                    await pause(1000);
+                }
+            }
+        }
+    } finally {
+        warming = false;
+    }
+}
+
+function pause(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms).unref());
+}
+
+
 const getThumbnail = titleHandler(async (res, category, title, { fields, cover }) => {
     if (cover) return res.sendFile(cover, { cacheControl: false, headers: { 'Cache-Control': 'no-cache' } });
     const match = await externalMetadata(category, fields?.title || title, fields?.year);
     res.set('Cache-Control', 'no-cache');
-    if (validCover(match?.coverUrl)) return res.redirect(302, match.coverUrl);
+    if (validCover(match?.coverUrl)) {
+        const cover = await disk.load('cover', match.coverUrl, 7 * 86400000, () => downloadCover(match.coverUrl));
+        const mime = cover && [null, 'image/jpeg', 'image/png', 'image/webp', 'image/gif'][cover[0]];
+        if (mime && cover.length > 1) return res.type(mime).send(cover.subarray(1));
+        return res.redirect(302, match.coverUrl);
+    }
     if (!res.destroyed) {
         const frame = await fallbackFrame(category, title);
         if (frame) return res.type('jpeg').send(frame);
@@ -361,4 +471,5 @@ const getInfo = titleHandler(async (res, category, title, { fields, cover }) => 
     });
 });
 
+onCatalogRefresh(prewarmCatalog);
 module.exports = { getThumbnail, getInfo };

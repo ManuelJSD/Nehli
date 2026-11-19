@@ -112,3 +112,5 @@ Nehli compara el título con los resultados externos y usa el año de estreno cu
 ```
 
 Los campos son opcionales y prevalecen sobre los datos externos. Guarda la imagen junto al JSON e indica su nombre en `cover`. Para cambiar solo la portada, en una carpeta basta con una imagen llamada `poster`, `cover` o `portada`. Para un vídeo suelto, usa una imagen con el mismo nombre base que el vídeo. Se admiten JPG, PNG, WebP y GIF.
+
+La caché de fichas, portadas y capturas se guarda en `~/.cache/nehli-metadata`. Puedes cambiar su ubicación con `METADATA_CACHE_FOLDER`. Tras escanear la biblioteca, Nehli prepara las entradas en segundo plano y deja de iniciar tareas de preparación mientras hay reproducción activa.

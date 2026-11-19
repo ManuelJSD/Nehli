@@ -29,6 +29,7 @@ let lastCacheTime = 0;
 const CACHE_TTL = 300000; // 5 minutos
 let refreshPromise = null;
 let probeCache = new Map();
+const catalogListeners = [];
 
 async function isVideo(filePath, scan) {
   const extension = path.extname(filePath).toLowerCase();
@@ -185,4 +186,8 @@ async function getVideos() {
   return videoCache ?? refreshPromise;
 }
 
-module.exports = { getVideos };
+function onCatalogRefresh(listener) {
+  catalogListeners.push(listener);
+}
+
+module.exports = { getVideos, onCatalogRefresh };

@@ -2,6 +2,7 @@ const express = require('express');
 const stream = require('../controllers/stream');
 
 const router = express.Router();
+const { notePlayback } = require('../utils/metadataCache');
 
 /**
  * @swagger
@@ -112,9 +113,9 @@ const router = express.Router();
  *         '200':
  *           description: Duración en segundos
  */
-router.get('/play', stream.streamVideo);
+router.get('/play', notePlayback, stream.streamVideo);
 router.get('/playlist', stream.getPlaylist);
-router.get('/segment', stream.getSegment);
+router.get('/segment', notePlayback, stream.getSegment);
 router.get('/metadata', stream.getVideoMetadata);
 router.get('/subtitle', stream.getSubtitle);
 router.get('/duration', stream.getVideoDuration);
