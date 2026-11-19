@@ -14,3 +14,19 @@ export interface listVideos {
     thumbnails: string[];
   } | { error: string };
 }
+
+export interface VideoTrack {
+  index: number;
+  title: string;
+  language: string;
+  codec: string;
+  default: boolean;
+  image?: boolean;
+}
+
+export interface VideoMetadata {
+  audios: VideoTrack[];
+  subtitles: VideoTrack[];
+  directPlay: boolean;
+  duration: number;
+}

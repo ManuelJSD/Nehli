@@ -1,101 +1,122 @@
 const express = require('express');
+const stream = require('../controllers/stream');
+
 const router = express.Router();
-const streamController = require('../controllers/stream');
 
 /**
  * @swagger
- * /stream/duration:
- *   get:
- *     summary: Devuelve la duración en segundos de un archivo de video.
- *     tags: [Videos]
- *     parameters:
- *       - in: query
- *         name: path
- *         required: true
- *         description: Ruta relativa del video (URL-encoded)
- *     responses:
- *       200:
- *         description: '{ duration: float }'
- *       404:
- *         description: Video no encontrado
+ * components:
+ *   parameters:
+ *     StreamPath:
+ *       in: query
+ *       name: path
+ *       required: true
+ *       description: Ruta relativa al catálogo, codificada en Base64.
+ *       schema:
+ *         type: string
+ *     StreamAudio:
+ *       in: query
+ *       name: audio
+ *       description: Índice de la pista de audio en los metadatos.
+ *       schema:
+ *         type: integer
+ *         minimum: 0
+ *     StreamImageSubtitle:
+ *       in: query
+ *       name: subtitle
+ *       description: Índice del subtítulo de imagen que debe integrarse en el vídeo.
+ *       schema:
+ *         type: integer
+ *         minimum: 0
+ * paths:
+ *   /stream/play:
+ *     get:
+ *       summary: Sirve un archivo MP4 compatible o genera un flujo MP4.
+ *       tags: [Videos]
+ *       parameters:
+ *         - $ref: '#/components/parameters/StreamPath'
+ *         - $ref: '#/components/parameters/StreamAudio'
+ *         - $ref: '#/components/parameters/StreamImageSubtitle'
+ *         - in: query
+ *           name: start
+ *           description: Posición inicial en segundos.
+ *           schema:
+ *             type: number
+ *             minimum: 0
+ *       responses:
+ *         '200':
+ *           description: Flujo MP4
+ *         '206':
+ *           description: Intervalo de bytes de un MP4 compatible
+ *   /stream/playlist:
+ *     get:
+ *       summary: Lista HLS VOD para la combinación de pistas elegida.
+ *       tags: [Videos]
+ *       parameters:
+ *         - $ref: '#/components/parameters/StreamPath'
+ *         - $ref: '#/components/parameters/StreamAudio'
+ *         - $ref: '#/components/parameters/StreamImageSubtitle'
+ *       responses:
+ *         '200':
+ *           description: Lista HLS
+ *   /stream/segment:
+ *     get:
+ *       summary: Genera el segmento indicado por la lista HLS.
+ *       tags: [Videos]
+ *       parameters:
+ *         - $ref: '#/components/parameters/StreamPath'
+ *         - $ref: '#/components/parameters/StreamAudio'
+ *         - $ref: '#/components/parameters/StreamImageSubtitle'
+ *         - in: query
+ *           name: segment
+ *           required: true
+ *           schema:
+ *             type: integer
+ *             minimum: 0
+ *       responses:
+ *         '200':
+ *           description: Segmento de vídeo MPEG-TS
+ *   /stream/metadata:
+ *     get:
+ *       summary: Obtiene las pistas, la duración y la compatibilidad directa del vídeo.
+ *       tags: [Videos]
+ *       parameters:
+ *         - $ref: '#/components/parameters/StreamPath'
+ *       responses:
+ *         '200':
+ *           description: Metadatos del vídeo
+ *   /stream/subtitle:
+ *     get:
+ *       summary: Extrae una pista de subtítulos de texto en WebVTT.
+ *       tags: [Videos]
+ *       parameters:
+ *         - $ref: '#/components/parameters/StreamPath'
+ *         - in: query
+ *           name: trackIndex
+ *           required: true
+ *           schema:
+ *             type: integer
+ *             minimum: 0
+ *       responses:
+ *         '200':
+ *           description: Subtítulos WebVTT
+ *         '415':
+ *           description: El subtítulo es una pista de imagen
+ *   /stream/duration:
+ *     get:
+ *       summary: Obtiene la duración del vídeo en segundos.
+ *       tags: [Videos]
+ *       parameters:
+ *         - $ref: '#/components/parameters/StreamPath'
+ *       responses:
+ *         '200':
+ *           description: Duración en segundos
  */
-router.get('/duration', streamController.getVideoDuration);
-
-/**
- * @swagger
- * /stream/{category}/{subcategory}/{video}:
- *   get:
- *     summary: Inicia el stream de video, convierte MKV a MP4 al vuelo si es necesario.
- *     tags: [Videos]
- *     parameters:
- *       - in: path
- *         name: category
- *         required: true
- *       - in: path
- *         name: subcategory
- *         required: true
- *       - in: path
- *         name: video
- *         required: true
- *     responses:
- *       200:
- *         description: Stream de video web compatible
- *       206:
- *         description: Fragmento de video (Partial Content)
- *       404:
- *         description: Video no encontrado
- */
-router.get('/play', streamController.streamVideo);
-
-/**
- * @swagger
- * /stream/metadata/{category}/{subcategory}/{video}:
- *   get:
- *     summary: Obtiene los metadatos de las pistas de audio y subtítulos de un archivo.
- *     tags: [Videos]
- *     parameters:
- *       - in: path
- *         name: category
- *         required: true
- *       - in: path
- *         name: subcategory
- *         required: true
- *       - in: path
- *         name: video
- *         required: true
- *     responses:
- *       200:
- *         description: Lista de pistas de audio y subtítulos
- */
-router.get('/metadata', streamController.getVideoMetadata);
-
-/**
- * @swagger
- * /stream/subtitle/{category}/{subcategory}/{video}/{trackIndex}:
- *   get:
- *     summary: Extrae una pista de subtítulo del MKV y la sirve como WebVTT al vuelo.
- *     tags: [Videos]
- *     parameters:
- *       - in: path
- *         name: category
- *         required: true
- *       - in: path
- *         name: subcategory
- *         required: true
- *       - in: path
- *         name: video
- *         required: true
- *       - in: path
- *         name: trackIndex
- *         required: true
- *     responses:
- *       200:
- *         description: Archivo WebVTT
- *         content:
- *           text/vtt:
- *             schema:
- *               type: string
- */
-router.get('/subtitle', streamController.getSubtitle);
+router.get('/play', stream.streamVideo);
+router.get('/playlist', stream.getPlaylist);
+router.get('/segment', stream.getSegment);
+router.get('/metadata', stream.getVideoMetadata);
+router.get('/subtitle', stream.getSubtitle);
+router.get('/duration', stream.getVideoDuration);
 
 module.exports = router;

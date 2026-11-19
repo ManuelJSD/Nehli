@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable, tap } from 'rxjs';
 
-import { listVideos, Video } from '../interfaces/video.interface';
+import { Video, VideoMetadata } from '../interfaces/video.interface';
 import { environments } from 'src/environments/environments';
 
 @Injectable({
@@ -24,8 +24,8 @@ export class VideoService {
     );
   }
 
-  getVideoMetadata(path: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/api/stream/metadata?path=${encodeURIComponent(path)}`);
+  getVideoMetadata(path: string): Observable<VideoMetadata> {
+    return this.http.get<VideoMetadata>(`${this.apiUrl}/api/stream/metadata?path=${encodeURIComponent(path)}`);
   }
 
   getVideoInfo(category: string, title: string): Observable<any> {

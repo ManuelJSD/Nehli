@@ -77,8 +77,14 @@
   margin: 0;
 }
 
-/* ---------- Selector Estático de Audio ---------- */
-.audio-control-static {
+/* ---------- Selectores de pistas ---------- */
+.track-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.track-control {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -91,36 +97,36 @@
   transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-.audio-control-static:hover {
+.track-control:hover {
   background: rgba(0, 0, 0, 0.9);
   border-color: rgba(255, 255, 255, 0.25);
 }
 
-.audio-control-static i {
+.track-control i {
   color: #fff;
   font-size: 1.2rem;
 }
 
 /* Customización del dropdown Glass */
-:host ::ng-deep .audio-control-static .p-dropdown {
+:host ::ng-deep .track-control .p-dropdown {
   background: transparent;
   border: none;
   box-shadow: none;
   min-width: 150px;
 }
 
-:host ::ng-deep .audio-control-static .p-dropdown .p-dropdown-label {
+:host ::ng-deep .track-control .p-dropdown .p-dropdown-label {
   color: #fff;
   font-weight: 500;
   font-size: 0.95rem;
   padding: 0.5rem;
 }
 
-:host ::ng-deep .audio-control-static .p-dropdown-trigger {
+:host ::ng-deep .track-control .p-dropdown-trigger {
   color: #fff;
 }
 
-:host ::ng-deep .audio-control-static .p-dropdown-panel {
+:host ::ng-deep .track-control .p-dropdown-panel {
   background: rgba(20, 20, 20, 0.95);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -381,11 +387,11 @@
     gap: 1.5rem;
   }
 
-  .audio-control-static {
+  .track-control {
     width: 100%;
   }
 
-  :host ::ng-deep .audio-control-static .p-dropdown {
+  :host ::ng-deep .track-control .p-dropdown {
     width: 100%;
   }
 }

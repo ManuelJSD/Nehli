@@ -4,7 +4,7 @@
 
   <!-- Hero Section: El reproductor domina toda la parte superior -->
   <div class="player-hero">
-    <video id="my-video" class="video-js vjs-fluid"></video>
+    <video id="my-video" class="video-js vjs-fluid" crossorigin="anonymous" playsinline></video>
   </div>
 
   <!-- Contenedor de Detalles (Bajo el reproductor) -->
@@ -17,26 +17,42 @@
         <h3 class="media-episode" *ngIf="video">{{ video }}</h3>
       </div>
       
-      <!-- Selector de Audio Estático -->
-      <div class="audio-control-static" *ngIf="audios && audios.length > 1">
-        <i class="pi pi-comments"></i>
-        <p-dropdown 
-            id="audioSelect"
-            [options]="audios" 
-            [(ngModel)]="currentAudioIndex" 
-            optionLabel="title" 
+      <div class="track-controls">
+        <div class="track-control" *ngIf="audios.length > 1">
+          <label for="audioSelect">Audio</label>
+          <p-dropdown
+            inputId="audioSelect"
+            [options]="audios"
+            [ngModel]="currentAudioIndex"
+            optionLabel="title"
             optionValue="index"
             appendTo="body"
-            (onChange)="cambiarAudioAudio($event)">
+            (onChange)="cambiarAudio($event)">
             <ng-template let-audio pTemplate="item">
-                <div class="audio-item">
-                    <span>{{audio.title}}</span>
-                    <small *ngIf="audio.language">{{audio.language | uppercase}}</small>
-                </div>
+              <div class="audio-item">
+                <span>{{ audio.title }}</span>
+                <small *ngIf="audio.language !== 'und'">{{ audio.language | uppercase }}</small>
+              </div>
             </ng-template>
-        </p-dropdown>
+          </p-dropdown>
+        </div>
+        <div class="track-control" *ngIf="subtitles.length">
+          <label for="subtitleSelect">Subtítulos</label>
+          <p-dropdown
+            inputId="subtitleSelect"
+            [options]="subtitleOptions"
+            [ngModel]="currentSubtitleIndex"
+            optionLabel="title"
+            optionValue="index"
+            appendTo="body"
+            (onChange)="cambiarSubtitulo($event)">
+          </p-dropdown>
+        </div>
       </div>
     </div>
+
+    <p role="alert" *ngIf="playbackError">{{ playbackError }}</p>
+    <p role="status" *ngIf="subtitleStatus">{{ subtitleStatus }}</p>
 
     <!-- Sección de Episodios (Full width, lista limpia) -->
     <div class="episodes-section">

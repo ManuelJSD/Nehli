@@ -29,6 +29,9 @@ Este directorio encapsula la API REST de **Nehli**, diseñada dinámicamente usa
 
 - Node.js >= 16
 - Servidor MySQL ejecutándose correctamente de manera local (XAMPP, Docker) o servidor remoto.
+- FFmpeg y FFprobe en el servidor. FFmpeg debe incluir los codificadores `libx264` y `aac` y los demultiplexores y decodificadores de los vídeos de tu biblioteca.
+
+Comprueba que el backend puede ejecutar `ffmpeg -version` y `ffprobe -version` desde la misma cuenta con la que arrancas Node.js. Si los binarios están fuera del `PATH`, indica sus rutas en `.env`.
 
 ---
 
@@ -41,6 +44,7 @@ La API requiere de ciertas variables de entorno para funcionar de manera correct
 ```ini
 PORT=3000
 HOST=localhost
+CORS_ORIGIN=http://localhost:4200
 
 # Clave Secreta para la generación y firma de los tokens
 JWT_SECRET=TU_SUPER_SECRETO_AQUI
@@ -50,7 +54,19 @@ MYSQL_DATABASE=nehli_database
 MYSQL_USER=nombre_user_bd
 MYSQL_PASSWORD=contraseña_bd
 MYSQL_HOST=localhost
+CORS_ORIGIN=http://localhost:4200
+
+# Biblioteca multimedia
+VIDEO_FOLDER=./videos
+
+# Opcional si los binarios están fuera del PATH
+# FFMPEG_PATH=/ruta/a/ffmpeg
+# FFPROBE_PATH=/ruta/a/ffprobe
 ```
+
+`VIDEO_FOLDER` apunta a la biblioteca organizada en directorios de categorías. El catálogo reconoce las extensiones de vídeo habituales, incluidas MP4, MKV, AVI, MOV, WebM, FLV, MPEG y TS. Para archivos sin extensión o con una extensión poco habitual, FFprobe comprueba si contienen una pista de vídeo. Los archivos de acompañamiento habituales se dejan fuera del catálogo.
+
+Nehli sirve directamente los MP4 compatibles y usa FFmpeg para generar HLS con H.264 hasta 1080p y AAC estéreo cuando necesita convertir el vídeo o seleccionar otra pista de audio. El reproductor permite elegir las pistas de audio y subtítulos incluidas en el archivo. Los subtítulos de texto se muestran mediante WebVTT. Los subtítulos de imagen se integran en el vídeo al seleccionarlos. La compatibilidad con archivos de origen depende de los formatos que pueda leer la instalación de FFmpeg del servidor.
 
 ---
 
