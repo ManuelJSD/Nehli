@@ -1,77 +1,145 @@
-<div class="commercial-layout">
+<div class="watch-page">
+  <div class="watch-shell">
+    <header class="watch-heading">
+      <nav aria-label="Ruta del vídeo" class="watch-breadcrumb">
+        <a routerLink="/browser">
+          <i class="pi pi-arrow-left" aria-hidden="true"></i>
+          Catálogo
+        </a>
+        <ng-container *ngIf="category && subcategory">
+          <i class="pi pi-angle-right" aria-hidden="true"></i>
+          <span>{{ category }}</span>
+        </ng-container>
+      </nav>
+      <h1>{{ subcategory || category }}</h1>
+      <p *ngIf="episodeLabel && episodeLabel !== subcategory" class="episode-title" [attr.title]="video">{{ episodeLabel }}</p>
+    </header>
 
+    <div class="watch-layout">
+      <section class="playback-column" aria-label="Reproductor">
+        <div class="player-hero"
+             [attr.data-subtitle-size]="subtitleStyle.size"
+             [class.subtitle-outline-enabled]="subtitleStyle.outline"
+             [style.--subtitle-text-color]="subtitleStyle.color"
+             [style.--subtitle-background]="subtitleStyle.background">
+          <video id="my-video" class="video-js vjs-fluid" crossorigin="anonymous" playsinline></video>
+          <div *ngIf="loadingVideo" class="player-feedback" role="status">
+            <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+            <span>Preparando vídeo…</span>
+          </div>
+          <div *ngIf="playbackError" class="player-feedback" role="alert">
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+            <span>{{ playbackError }}</span>
+          </div>
+        </div>
 
-
-  <!-- Hero Section: El reproductor domina toda la parte superior -->
-  <div class="player-hero">
-    <video id="my-video" class="video-js vjs-fluid" crossorigin="anonymous" playsinline></video>
-  </div>
-
-  <!-- Contenedor de Detalles (Bajo el reproductor) -->
-  <div class="media-container">
-    
-    <!-- Metadatos y Acciones -->
-    <div class="media-header">
-      <div class="title-block">
-        <h1 class="media-title">{{ subcategory || category }}</h1>
-        <h3 class="media-episode" *ngIf="video">{{ video }}</h3>
-      </div>
-      
-      <div class="track-controls">
-        <div class="track-control" *ngIf="audios.length > 1">
-          <label for="audioSelect">Audio</label>
-          <p-dropdown
-            inputId="audioSelect"
-            [options]="audios"
-            [ngModel]="currentAudioIndex"
-            optionLabel="title"
-            optionValue="index"
-            appendTo="body"
-            (onChange)="cambiarAudio($event)">
-            <ng-template let-audio pTemplate="item">
-              <div class="audio-item">
-                <span>{{ audio.title }}</span>
-                <small *ngIf="audio.language !== 'und'">{{ audio.language | uppercase }}</small>
+        <section class="watch-options"
+                 *ngIf="audios.length > 1 || subtitles.length"
+                 aria-label="Audio y subtítulos">
+          <div class="track-controls">
+            <div class="track-control" *ngIf="audios.length > 1">
+              <i class="pi pi-volume-up" aria-hidden="true"></i>
+              <div class="track-field">
+                <label for="audioSelect">Audio</label>
+                <p-dropdown
+                  inputId="audioSelect"
+                  [options]="audios"
+                  [ngModel]="currentAudioIndex"
+                  optionLabel="title"
+                  optionValue="index"
+                  appendTo="body"
+                  panelStyleClass="nehli-track-menu"
+                  (onChange)="cambiarAudio($event)">
+                  <ng-template let-audio pTemplate="item">
+                    <div class="audio-item">
+                      <span>{{ audio.title }}</span>
+                      <small *ngIf="audio.language !== 'und'">{{ audio.language | uppercase }}</small>
+                    </div>
+                  </ng-template>
+                </p-dropdown>
               </div>
-            </ng-template>
-          </p-dropdown>
-        </div>
-        <div class="track-control" *ngIf="subtitles.length">
-          <label for="subtitleSelect">Subtítulos</label>
-          <p-dropdown
-            inputId="subtitleSelect"
-            [options]="subtitleOptions"
-            [ngModel]="currentSubtitleIndex"
-            optionLabel="title"
-            optionValue="index"
-            appendTo="body"
-            (onChange)="cambiarSubtitulo($event)">
-          </p-dropdown>
-        </div>
-      </div>
-    </div>
+            </div>
+            <div class="track-control" *ngIf="subtitles.length">
+              <i class="pi pi-align-left" aria-hidden="true"></i>
+              <div class="track-field">
+                <label for="subtitleSelect">Subtítulos</label>
+                <p-dropdown
+                  inputId="subtitleSelect"
+                  [options]="subtitleOptions"
+                  [ngModel]="currentSubtitleIndex"
+                  optionLabel="title"
+                  optionValue="index"
+                  appendTo="body"
+                  panelStyleClass="nehli-track-menu"
+                  (onChange)="cambiarSubtitulo($event)">
+                </p-dropdown>
+              </div>
+            </div>
+          </div>
 
-    <p role="alert" *ngIf="playbackError">{{ playbackError }}</p>
-    <p role="status" *ngIf="subtitleStatus">{{ subtitleStatus }}</p>
+          <details class="subtitle-style" *ngIf="hasTextSubtitles">
+            <summary>
+              <i class="pi pi-sliders-h" aria-hidden="true"></i>
+              Estilo de subtítulos
+              <i class="pi pi-chevron-down" aria-hidden="true"></i>
+            </summary>
+            <div class="subtitle-style-options">
+              <label>
+                Tamaño
+                <select [ngModel]="subtitleStyle.size" (ngModelChange)="updateSubtitleStyle({ size: $event })">
+                  <option value="small">Pequeño</option>
+                  <option value="normal">Normal</option>
+                  <option value="large">Grande</option>
+                </select>
+              </label>
+              <label>
+                Color
+                <input type="color" [ngModel]="subtitleStyle.color" (ngModelChange)="updateSubtitleStyle({ color: $event })">
+              </label>
+              <label>
+                Fondo
+                <select [ngModel]="subtitleStyle.background" (ngModelChange)="updateSubtitleStyle({ background: $event })">
+                  <option value="transparent">Sin fondo</option>
+                  <option value="rgba(0, 0, 0, 0.6)">Semitransparente</option>
+                  <option value="#000000">Negro</option>
+                </select>
+              </label>
+              <label class="subtitle-outline">
+                <input type="checkbox" [ngModel]="subtitleStyle.outline" (ngModelChange)="updateSubtitleStyle({ outline: $event })">
+                Contorno
+              </label>
+              <button type="button" (click)="resetSubtitleStyle()">Restablecer</button>
+            </div>
+          </details>
 
-    <!-- Sección de Episodios (Full width, lista limpia) -->
-    <div class="episodes-section">
-      <div class="section-title">
-        <h2>Episodios</h2>
-        <div class="divider"></div>
-      </div>
-      
-      <div class="tree-container-commercial">
-        <p-tree 
-          [value]="filesTree" 
-          selectionMode="single" 
+          <p role="status" *ngIf="subtitleStatus" class="subtitle-status">{{ subtitleStatus }}</p>
+        </section>
+      </section>
+
+      <aside class="episode-panel" aria-labelledby="episode-list-title">
+        <header class="episode-panel-heading">
+          <h2 id="episode-list-title">Episodios</h2>
+          <span *ngIf="episodeCount" [attr.aria-label]="episodeCount + ' episodios'">{{ episodeCount }}</span>
+        </header>
+        <p-tree
+          *ngIf="filesTree.length"
+          [value]="filesTree"
+          selectionMode="single"
           [(selection)]="selectedNode"
           (onNodeSelect)="seleccionarCapitulo($event)"
-          [filter]="true" 
-          filterPlaceholder="Buscar episodio...">
+          [filter]="episodeCount > 1"
+          filterBy="label,data.name"
+          filterPlaceholder="Buscar episodio"
+          ariaLabelledBy="episode-list-title"
+          emptyMessage="No se encontraron episodios">
+          <ng-template pTemplate="default" let-node>
+            <span class="episode-name" [attr.title]="node.data?.name || node.label">{{ node.label }}</span>
+          </ng-template>
         </p-tree>
-      </div>
+        <p *ngIf="!filesTree.length" class="episode-empty">
+          {{ loadingVideo ? 'Cargando episodios…' : 'No hay episodios disponibles.' }}
+        </p>
+      </aside>
     </div>
-
   </div>
 </div>

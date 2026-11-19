@@ -7,6 +7,63 @@ import { VideoMetadata, VideoTrack } from 'src/app/interfaces/video.interface';
 import { VideoService } from 'src/app/services/video.service';
 import { environments } from 'src/environments/environments';
 
+type SubtitleStyle = {
+  size: 'small' | 'normal' | 'large';
+  color: string;
+  background: 'transparent' | 'rgba(0, 0, 0, 0.6)' | '#000000';
+  outline: boolean;
+};
+
+const subtitleStyleKey = 'nehli.subtitleStyle';
+const defaultSubtitleStyle: SubtitleStyle = {
+  size: 'normal',
+  color: '#ffffff',
+  background: 'transparent',
+  outline: true
+};
+
+function readSubtitleStyle(): SubtitleStyle {
+  try {
+    const saved = JSON.parse(localStorage.getItem(subtitleStyleKey) || '{}') as Partial<SubtitleStyle> | null;
+    return {
+      size: saved?.size === 'small' || saved?.size === 'large' ? saved.size : 'normal',
+      color: typeof saved?.color === 'string' && /^#[0-9a-f]{6}$/i.test(saved.color) ? saved.color : '#ffffff',
+      background: saved?.background === '#000000' || saved?.background === 'rgba(0, 0, 0, 0.6)'
+        ? saved.background
+        : 'transparent',
+      outline: saved?.outline !== false
+    };
+  } catch {
+    return { ...defaultSubtitleStyle };
+  }
+}
+
+const playerSpanish = {
+  'Play': 'Reproducir',
+  'Pause': 'Pausar',
+  'Play Video': 'Reproducir vídeo',
+  'Mute': 'Silenciar',
+  'Unmute': 'Activar sonido',
+  'Volume Level': 'Volumen',
+  'Progress Bar': 'Progreso',
+  'Playback Rate': 'Velocidad de reproducción',
+  'Fullscreen': 'Pantalla completa',
+  'Exit Fullscreen': 'Salir de pantalla completa',
+  'Picture-in-Picture': 'Imagen en imagen',
+  'Exit Picture-in-Picture': 'Salir de imagen en imagen',
+  'Skip backward {1} seconds': 'Retroceder {1} segundos',
+  'Skip forward {1} seconds': 'Adelantar {1} segundos',
+  'Current Time': 'Tiempo transcurrido',
+  'Duration': 'Duración'
+};
+
+const playerControls = {
+  skipButtons: { backward: 10, forward: 10 },
+  volumePanel: { inline: false },
+  remainingTimeDisplay: false,
+  subsCapsButton: false
+};
+
 @Component({
   selector: 'app-video',
   templateUrl: './video.component.html',
@@ -18,6 +75,8 @@ export class VideoComponent implements OnInit, OnDestroy {
   video = '';
   videoRelPath = '';
   filesTree: TreeNode[] = [];
+  episodeCount = 0;
+  loadingVideo = true;
   selectedNode: TreeNode | null = null;
   audios: VideoTrack[] = [];
   subtitles: VideoTrack[] = [];
@@ -26,6 +85,8 @@ export class VideoComponent implements OnInit, OnDestroy {
   currentSubtitleIndex = -1;
   playbackError = '';
   subtitleStatus = '';
+  hasTextSubtitles = false;
+  subtitleStyle = readSubtitleStyle();
 
   private player?: ReturnType<typeof videojs>;
   private metadata?: VideoMetadata;
@@ -48,10 +109,17 @@ export class VideoComponent implements OnInit, OnDestroy {
     this.catalogRequest = this.videoService.getVideosAndThumbnails(this.category, this.subcategory).subscribe({
       next: data => {
         this.filesTree = this.buildTreeNodes(data);
+        this.episodeCount = this.countEpisodes(this.filesTree);
         const node = this.findVideoNode(this.filesTree, this.video) || this.findVideoNode(this.filesTree);
-        if (node) this.seleccionarCapitulo({ node });
+        if (node) {
+          this.seleccionarCapitulo({ node });
+        } else {
+          this.loadingVideo = false;
+          this.playbackError = 'No hay vídeos disponibles.';
+        }
       },
       error: () => {
+        this.loadingVideo = false;
         this.playbackError = 'No se pudo cargar el catálogo de vídeos.';
       }
     });
@@ -64,17 +132,34 @@ export class VideoComponent implements OnInit, OnDestroy {
     this.player?.dispose();
   }
 
-  private buildTreeNodes(data: any): TreeNode[] {
-    const folders = Object.entries(data?.folders || {}).map(([label, contents]) => ({
-      label,
-      expanded: true,
-      icon: 'pi pi-folder-open',
-      children: this.buildTreeNodes(contents),
-      selectable: false
-    }));
+  get episodeLabel(): string {
+    return this.episodeName(this.video);
+  }
+
+  private episodeName(filename: string): string {
+    return filename.replace(/\.[a-z0-9]{2,5}$/i, '');
+  }
+
+  private countEpisodes(nodes: TreeNode[]): number {
+    return nodes.reduce((total, node) => total + (node.children ? this.countEpisodes(node.children) : 1), 0);
+  }
+
+  private buildTreeNodes(data: any, parentKey = ''): TreeNode[] {
+    const folders = Object.entries(data?.folders || {}).map(([label, contents]) => {
+      const key = parentKey + encodeURIComponent(label) + '/';
+      return {
+        key: 'folder:' + key,
+        label,
+        expanded: true,
+        icon: 'pi pi-folder',
+        children: this.buildTreeNodes(contents, key),
+        selectable: false
+      };
+    });
     const videos: TreeNode[] = (data?.videos || []).map((video: { name: string; relPath: string }) => ({
-      label: video.name,
-      icon: 'pi pi-video',
+      key: 'video:' + video.relPath,
+      label: this.episodeName(video.name),
+      icon: 'pi pi-play',
       data: video
     }));
     return [...folders, ...videos];
@@ -91,6 +176,7 @@ export class VideoComponent implements OnInit, OnDestroy {
 
   seleccionarCapitulo({ node }: { node: TreeNode }): void {
     if (!node.data || node.data.relPath === this.videoRelPath) return;
+    this.loadingVideo = true;
     this.video = node.data.name;
     this.videoRelPath = node.data.relPath;
     this.selectedNode = node;
@@ -101,6 +187,7 @@ export class VideoComponent implements OnInit, OnDestroy {
     this.metadata = undefined;
     this.audios = [];
     this.subtitles = [];
+    this.hasTextSubtitles = false;
     this.subtitleOptions = [];
     this.currentAudioIndex = undefined;
     this.currentSubtitleIndex = -1;
@@ -111,6 +198,7 @@ export class VideoComponent implements OnInit, OnDestroy {
         this.metadata = metadata;
         this.audios = metadata.audios;
         this.subtitles = metadata.subtitles;
+        this.hasTextSubtitles = this.subtitles.some(track => !track.image);
         this.subtitleOptions = [
           { index: -1, title: 'Desactivados' },
           ...this.subtitles.map(({ index, title, language }) => ({
@@ -123,6 +211,7 @@ export class VideoComponent implements OnInit, OnDestroy {
         this.loadSource({ time: 0, paused: false });
       },
       error: () => {
+        this.loadingVideo = false;
         this.playbackError = 'No se pudo leer este vídeo. Comprueba que FFmpeg y ffprobe estén disponibles en el servidor.';
       }
     });
@@ -143,6 +232,19 @@ export class VideoComponent implements OnInit, OnDestroy {
     } else {
       void this.loadSubtitle();
     }
+  }
+
+  updateSubtitleStyle(changes: Partial<SubtitleStyle>): void {
+    this.subtitleStyle = { ...this.subtitleStyle, ...changes };
+    try {
+      localStorage.setItem(subtitleStyleKey, JSON.stringify(this.subtitleStyle));
+    } catch {
+      // Keep the preferences for this playback when browser storage is unavailable.
+    }
+  }
+
+  resetSubtitleStyle(): void {
+    this.updateSubtitleStyle(defaultSubtitleStyle);
   }
 
   private selectedSubtitle(): VideoTrack | undefined {
@@ -166,15 +268,26 @@ export class VideoComponent implements OnInit, OnDestroy {
         controls: true,
         preload: 'auto',
         poster: 'assets/images/logo.webp',
-        controlBar: { subsCapsButton: false }
+        aspectRatio: '16:9',
+        language: 'es',
+        languages: { es: playerSpanish },
+        playbackRates: [0.75, 1, 1.25, 1.5, 2],
+        controlBar: playerControls
+      });
+      this.player.on('error', () => { this.loadingVideo = false; });
+      this.player.on('ratechange', () => {
+        const rate = this.player?.playbackRate();
+        if (rate && this.player?.defaultPlaybackRate() !== rate) this.player?.defaultPlaybackRate(rate);
       });
     }
     const player = this.player;
     this.clearSourceListener();
     this.detachSubtitle();
     this.playbackError = '';
+    this.loadingVideo = true;
     this.pendingPlayback = playback;
     this.onSourceReady = () => {
+      this.loadingVideo = false;
       this.onSourceReady = undefined;
       this.pendingPlayback = undefined;
       if (playback.time > 0) player.currentTime(playback.time);
