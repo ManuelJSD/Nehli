@@ -75,6 +75,15 @@ export class LoginService {
     }
   }
 
+  isAdmin(): boolean {
+    try {
+      const payload = this.getToken()?.split('.')[1];
+      return !!payload && JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))).role === 'admin';
+    } catch {
+      return false;
+    }
+  }
+
   logout(): void {
     // Eliminar el token del localStorage
     localStorage.removeItem('token');

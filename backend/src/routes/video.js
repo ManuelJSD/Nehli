@@ -90,4 +90,9 @@ router.get('/thumbnail', thumbnailController.getThumbnail);
  */
 router.get('/info', authMiddleware, thumbnailController.getInfo);
 
+const requireAdmin = (req, res, next) => req.user?.role === 'admin' ? next() : res.sendStatus(403);
+router.get('/editor', authMiddleware, requireAdmin, thumbnailController.getEditor);
+router.get('/editor/anime', authMiddleware, requireAdmin, thumbnailController.searchEditorAnime);
+router.put('/editor', authMiddleware, requireAdmin, thumbnailController.saveEditor);
+
 module.exports = router;

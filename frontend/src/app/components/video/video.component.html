@@ -33,6 +33,12 @@
           </div>
         </div>
 
+        <div class="episode-actions" *ngIf="nextEpisode">
+          <button type="button" (click)="playNextEpisode()" [attr.title]="nextEpisode.label">
+            Siguiente episodio <i class="pi pi-step-forward" aria-hidden="true"></i>
+          </button>
+        </div>
+
         <section class="watch-options"
                  *ngIf="audios.length > 1 || subtitles.length"
                  aria-label="Audio y subtítulos">

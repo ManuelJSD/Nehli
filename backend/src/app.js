@@ -40,6 +40,7 @@ app.use(helmet({
 }));
 
 // ─── Parseo de JSON ───────────────────────────────────────────────────────────
+app.use('/api/video/editor', express.json({ limit: '1mb' }));
 app.use(express.json());
 
 // ─── Seguridad: Rate Limiting global (anti-flood) ────────────────────────────

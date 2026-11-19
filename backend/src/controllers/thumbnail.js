@@ -6,6 +6,7 @@ const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const { getVideos, onCatalogRefresh } = require('./video');
 const disk = require('../utils/metadataCache');
+const overrides = require('../utils/metadataOverrides');
 const runFile = promisify(execFile);
 const frameCache = new Map();
 const frameQueue = [];
@@ -159,12 +160,13 @@ async function searchAnime(title) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            query: 'query ($title: String) { Page(perPage: 8) { media(type: ANIME, search: $title) { title { romaji english native } synonyms startDate { year } description(asHtml: false) averageScore genres coverImage { large } } } }',
+            query: 'query ($title: String) { Page(perPage: 8) { media(type: ANIME, search: $title) { id title { romaji english native } synonyms startDate { year } description(asHtml: false) averageScore genres coverImage { large } } } }',
             variables: { title }
         })
     });
     return (response?.data?.Page?.media || []).map(media => ({
-        titles: [...Object.values(media.title || {}), ...(media.synonyms || [])],
+        id: media.id,
+        titles: [...Object.values(media.title || {}), ...(media.synonyms || [])].filter(Boolean),
         year: media.startDate?.year, synopsis: stripMarkup(media.description),
         rating: media.averageScore ? media.averageScore / 10 : null,
         genres: media.genres, coverUrl: media.coverImage?.large
@@ -350,7 +352,7 @@ function titleHandler(handler) {
         }
         try {
             const local = await readLocal(category, title);
-            await handler(res, category, title, local);
+            await handler(res, category, title, local, req);
         } catch (error) {
             next(error);
         }
@@ -412,8 +414,9 @@ async function warm() {
                 for (const [title, entry] of Object.entries(titles)) {
                     while (disk.playbackBusy()) await pause(2000);
                     try {
+                        const edited = await overrides.read(category, title);
                         const { fields, cover } = await readLocal(category, title);
-                        if (cover && fields?.synopsis) continue;
+                        if (edited.image || edited.match || (cover && fields?.synopsis)) continue;
                         const match = await externalMetadata(category, fields?.title || title, fields?.year);
                         while (disk.playbackBusy()) await pause(2000);
                         if (!cover) {
@@ -441,8 +444,11 @@ function pause(ms) {
 
 
 const getThumbnail = titleHandler(async (res, category, title, { fields, cover }) => {
-    if (cover) return res.sendFile(cover, { cacheControl: false, headers: { 'Cache-Control': 'no-cache' } });
-    const match = await externalMetadata(category, fields?.title || title, fields?.year);
+    const edited = await overrides.read(category, title);
+    const uploaded = overrides.decodeImage(edited.image);
+    if (uploaded) return res.set('Cache-Control', 'no-cache').type(uploaded.mime).send(uploaded.bytes);
+    if (cover && !edited.match?.coverUrl) return res.sendFile(cover, { cacheControl: false, headers: { 'Cache-Control': 'no-cache' } });
+    const match = edited.match || await externalMetadata(category, fields?.title || title, fields?.year);
     res.set('Cache-Control', 'no-cache');
     if (validCover(match?.coverUrl)) {
         const cover = await disk.load('cover', match.coverUrl, 7 * 86400000, () => downloadCover(match.coverUrl));
@@ -457,19 +463,88 @@ const getThumbnail = titleHandler(async (res, category, title, { fields, cover }
     }
 });
 
-const getInfo = titleHandler(async (res, category, title, { fields, cover }) => {
-    const match = fields?.synopsis && cover ? undefined
-        : await externalMetadata(category, fields?.title || title, fields?.year);
-    res.json({
-        title: fields?.title || title,
-        synopsis: fields?.synopsis || match?.synopsis || null,
-        year: fields?.year || match?.year || null,
+async function titleInfo(category, title, { fields, cover }, edited) {
+    const match = edited.match || (fields?.synopsis && cover ? undefined
+        : await externalMetadata(category, fields?.title || title, fields?.year));
+    return {
+        title: edited.title || edited.match?.title || fields?.title || title,
+        synopsis: edited.synopsis || edited.match?.synopsis || fields?.synopsis || match?.synopsis || null,
+        year: edited.match?.year || fields?.year || match?.year || null,
         rating: match?.rating ?? null,
-        genres: fields?.genres || match?.genres || [],
-        sourceUrl: fields?.synopsis ? undefined : match?.sourceUrl,
-        coverUrl: !cover && validCover(match?.coverUrl) ? match.coverUrl : null
+        genres: edited.match?.genres || fields?.genres || match?.genres || [],
+        sourceUrl: edited.synopsis || fields?.synopsis ? undefined : match?.sourceUrl,
+        coverUrl: !edited.image && (!cover || edited.match) && validCover(match?.coverUrl) ? match.coverUrl : null
+    };
+}
+
+const getInfo = titleHandler(async (res, category, title, local) => {
+    const edited = await overrides.read(category, title);
+    res.json(await titleInfo(category, title, local, edited));
+});
+
+function animeCandidate(candidate) {
+    const { id, titles, synopsis, year, rating, genres, coverUrl } = candidate;
+    return { id, title: titles[0], synopsis, year, rating, genres,
+        coverUrl: /^https:\/\/s\d+\.anilist\.co\//.test(coverUrl || '') ? coverUrl : undefined };
+}
+
+async function findAnime(id) {
+    const response = await request('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            query: 'query ($id: Int) { Media(id: $id, type: ANIME) { id title { romaji english native } startDate { year } description(asHtml: false) averageScore genres coverImage { large } } }',
+            variables: { id }
+        })
     });
+    const media = response?.data?.Media;
+    if (!media) return;
+    return animeCandidate({
+        id: media.id, titles: Object.values(media.title || {}).filter(Boolean),
+        synopsis: stripMarkup(media.description), year: media.startDate?.year,
+        rating: media.averageScore ? media.averageScore / 10 : null, genres: media.genres, coverUrl: media.coverImage?.large
+    });
+}
+
+const searchEditorAnime = titleHandler(async (res, category, title, local, req) => {
+    if (normalize(category) !== 'anime') return res.sendStatus(400);
+    const query = stringValue(req.query.q);
+    if (!query || query.length > 160) return res.sendStatus(400);
+    res.set('Cache-Control', 'no-store').json((await searchAnime(query)).map(animeCandidate));
+});
+
+const getEditor = titleHandler(async (res, category, title, local) => {
+    const { image, ...edited } = await overrides.read(category, title);
+    res.set('Cache-Control', 'no-store').json({ ...edited, hasImage: Boolean(image) });
+});
+
+const saveEditor = titleHandler(async (res, category, title, local, req) => {
+    const { displayTitle, synopsis, animeId, image } = req.body || {};
+    if (typeof displayTitle !== 'string' || displayTitle.length > 240 ||
+        typeof synopsis !== 'string' || synopsis.length > 8000 ||
+        (animeId !== null && (normalize(category) !== 'anime' || !Number.isSafeInteger(animeId) || animeId <= 0 || animeId > 2147483647)) ||
+        (image !== undefined && image !== null && !overrides.decodeImage(image))) {
+        return res.status(400).json({ error: 'Los datos de la ficha no son válidos.' });
+    }
+    const catalog = await getVideos();
+    if (!Object.hasOwn(catalog, category) || !Object.hasOwn(catalog[category], title)) return res.sendStatus(404);
+
+    const previous = await overrides.read(category, title);
+    const match = animeId === null ? undefined
+        : previous.match?.id === animeId ? previous.match : await findAnime(animeId);
+    if (animeId !== null && !match) {
+        return res.status(502).json({ error: 'No se pudo recuperar esa ficha de AniList.' });
+    }
+    const edited = {
+        title: stringValue(displayTitle),
+        synopsis: stringValue(synopsis),
+        match,
+        image: image === undefined ? previous.image : image || undefined
+    };
+    await overrides.write(category, title, edited);
+    // Respond without an external lookup so the client can reflect the saved state immediately.
+    res.sendStatus(204);
 });
 
 onCatalogRefresh(prewarmCatalog);
-module.exports = { getThumbnail, getInfo };
+module.exports = { getThumbnail, getInfo, getEditor, saveEditor, searchEditorAnime };

@@ -1,6 +1,7 @@
 const { spawn } = require('node:child_process');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const segmentCache = require('../utils/segmentCache');
 
 const videoFolder = path.resolve(process.env.VIDEO_FOLDER || './videos');
 const segmentLength = 6;
@@ -53,7 +54,7 @@ function isInside(folder, filename) {
     return relative && relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative);
 }
 
-function runMediaTool(command, args, { res, passthrough = false } = {}) {
+function runMediaTool(command, args, { res, passthrough = false, timeout, signal } = {}) {
     const executable = process.env[command.toUpperCase() + '_PATH'] || command;
     return new Promise((resolve, reject) => {
         const child = spawn(executable, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -61,8 +62,10 @@ function runMediaTool(command, args, { res, passthrough = false } = {}) {
         let stderr = '';
         let bytes = 0;
         const cancel = () => child.kill();
+        const timer = timeout && setTimeout(cancel, timeout).unref();
         res?.once('close', cancel);
-        if (res?.destroyed) cancel();
+        signal?.addEventListener('abort', cancel, { once: true });
+        if (res?.destroyed || signal?.aborted) cancel();
 
         child.stderr.on('data', data => {
             stderr = (stderr + data.toString()).slice(-4000);
@@ -86,6 +89,8 @@ function runMediaTool(command, args, { res, passthrough = false } = {}) {
             reject(httpError(503, 'No se pudo ejecutar ' + command + ': ' + error.message));
         });
         child.once('close', code => {
+            clearTimeout(timer);
+            signal?.removeEventListener('abort', cancel);
             res?.off('close', cancel);
             if (code === 0 && (passthrough || bytes > 0)) {
                 resolve(Buffer.concat(chunks));
@@ -122,6 +127,7 @@ async function probeVideo({ filename, version }) {
 
             return {
                 video, audioStreams, subtitleStreams, audios, subtitles, duration, directPlay,
+                container: probe.format?.format_name,
                 startTime: Number(probe.format?.start_time) || 0,
                 bitmapTimelines: new Map()
             };
@@ -340,21 +346,68 @@ const getSubtitle = mediaHandler(async (req, res, file, media) => {
     if (!res.destroyed) res.type('text/vtt; charset=utf-8').send(output);
 });
 
-const getPlaylist = mediaHandler((req, res, file, media) => {
-    pickTracks(media, req.query);
+function remuxPlan(file, media) {
+    const { video, container, duration, startTime } = media;
+    if (video.codec_name !== 'h264' || video.pix_fmt !== 'yuv420p' || video.has_b_frames !== 0 ||
+        video.field_order !== 'progressive' || video.width > 1920 || video.height > 1080 ||
+        !container?.split(',').some(name => name === 'matroska' || name === 'mp4')) return;
+
+    // Use full keyframe boundaries. Cutting stream copy at an arbitrary time can repeat
+    // the previous GOP and shift both subtitles and seeking.
+    media.remuxPlan ??= runMediaTool('ffprobe', [
+        '-v', 'error', '-protocol_whitelist', 'file', '-select_streams', String(video.index),
+        '-show_entries', 'packet=pts_time,flags', '-of', 'csv=p=0', file.filename
+    ], { timeout: 4000 }).then(output => {
+        const starts = [0];
+        let first;
+        for (const line of output.toString('utf8').split('\n')) {
+            const [timestamp, flags] = line.split(',');
+            if (!flags?.startsWith('K')) continue;
+            const time = Math.round((Number(timestamp) - startTime) * 1e6) / 1e6;
+            if (!Number.isFinite(time)) return;
+            first ??= time;
+            if (time >= starts.at(-1) + segmentLength && time < duration) starts.push(time);
+        }
+        if (first === undefined || Math.abs(first) > 0.05) return;
+        const cuts = starts.map((start, index) => ({ start, duration: (starts[index + 1] ?? duration) - start }));
+        if (cuts.some(cut => cut.duration > segmentLength * 2)) return;
+        return cuts;
+    }).catch(() => undefined);
+    return media.remuxPlan;
+}
+
+function remuxSegment(file, media, tracks, start, duration, signal) {
+    // Seek before the boundary, then discard until its exact source timestamp.
+    const args = ['-hide_banner', '-loglevel', 'error', '-copyts'];
+    if (start > 0) args.push('-ss', String(Math.max(0, start - 0.1)));
+    args.push('-protocol_whitelist', 'file', '-i', file.filename,
+        '-ss', (start + media.startTime).toFixed(6), '-t', duration.toFixed(6),
+        '-map', '0:' + media.video.index, '-c:v', 'copy');
+    if (tracks.audio) {
+        args.push('-map', '0:' + tracks.audio.index, '-c:a', 'aac', '-ac', '2', '-ar', '48000', '-b:a', '160k');
+    }
+    return runMediaTool('ffmpeg', args.concat('-f', 'mpegts', 'pipe:1'), { timeout: 45000, signal });
+}
+
+const getPlaylist = mediaHandler(async (req, res, file, media) => {
+    const tracks = pickTracks(media, req.query);
     if (!media.duration) throw httpError(422, 'No se pudo determinar la duración del video');
 
+    const cuts = !tracks.subtitle && await remuxPlan(file, media);
+    const target = cuts ? Math.ceil(cuts.reduce((max, cut) => Math.max(max, cut.duration), 0)) : segmentLength;
     const lines = [
         '#EXTM3U', '#EXT-X-VERSION:3', '#EXT-X-PLAYLIST-TYPE:VOD',
-        '#EXT-X-TARGETDURATION:' + segmentLength, '#EXT-X-MEDIA-SEQUENCE:0',
+        '#EXT-X-TARGETDURATION:' + target, '#EXT-X-MEDIA-SEQUENCE:0',
         '#EXT-X-INDEPENDENT-SEGMENTS'
     ];
     const query = new URLSearchParams({ path: req.query.path });
     for (const key of ['audio', 'subtitle']) {
         if (req.query[key] !== undefined) query.set(key, req.query[key]);
     }
-    for (let segment = 0; segment * segmentLength < media.duration; segment++) {
-        const length = Math.min(segmentLength, media.duration - segment * segmentLength);
+    if (cuts) query.set('remux', file.version);
+    const count = cuts ? cuts.length : Math.ceil(media.duration / segmentLength);
+    for (let segment = 0; segment < count; segment++) {
+        const length = cuts ? cuts[segment].duration : Math.min(segmentLength, media.duration - segment * segmentLength);
         // FFmpeg starts a new transport-stream timeline for each independently seekable segment.
         if (segment > 0) lines.push('#EXT-X-DISCONTINUITY');
         query.set('segment', String(segment));
@@ -366,13 +419,34 @@ const getPlaylist = mediaHandler((req, res, file, media) => {
 const getSegment = mediaHandler(async (req, res, file, media) => {
     const segment = parseIndex(req.query.segment, 'Índice de segmento');
     if (segment === undefined) throw httpError(400, 'Falta el índice de segmento');
-    const start = segment * segmentLength;
-    if (start >= media.duration) throw httpError(404, 'Segmento no encontrado');
-
     const tracks = pickTracks(media, req.query);
-    const inputStart = await bitmapInputStart(file, media, tracks.subtitle, start);
-    const args = transcodeArgs(file.filename, media.video, tracks, inputStart, start, Math.min(segmentLength, media.duration - start));
-    const output = await runMediaTool('ffmpeg', args.concat('-f', 'mpegts', 'pipe:1'), { res });
+    let cut;
+    if (req.query.remux !== undefined) {
+        if (req.query.remux !== file.version) throw httpError(409, 'El vídeo cambió. Vuelve a cargar la lista');
+        const cuts = !tracks.subtitle && await remuxPlan(file, media);
+        if (!cuts) throw httpError(409, 'Vuelve a cargar la lista de reproducción');
+        cut = cuts[segment];
+    } else {
+        const start = segment * segmentLength;
+        if (start < media.duration) cut = { start, duration: Math.min(segmentLength, media.duration - start) };
+    }
+    if (!cut) throw httpError(404, 'Segmento no encontrado');
+
+    const { start, duration } = cut;
+    const key = JSON.stringify([file.filename, file.version, tracks.audio?.index, tracks.subtitle?.index, start, duration, req.query.remux !== undefined]);
+    const output = await segmentCache.load(key, res, async signal => {
+        if (req.query.remux !== undefined) {
+            try {
+                return await remuxSegment(file, media, tracks, start, duration, signal);
+            } catch {
+                signal.throwIfAborted();
+                // The source may have an incompatible stream or an unusable seek index.
+            }
+        }
+        const inputStart = await bitmapInputStart(file, media, tracks.subtitle, start);
+        const args = transcodeArgs(file.filename, media.video, tracks, inputStart, start, duration);
+        return runMediaTool('ffmpeg', args.concat('-f', 'mpegts', 'pipe:1'), { timeout: 90000, signal });
+    });
     if (!res.destroyed) res.type('video/mp2t').send(output);
 });
 

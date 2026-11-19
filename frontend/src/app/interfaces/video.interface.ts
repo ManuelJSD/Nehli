@@ -30,3 +30,24 @@ export interface VideoMetadata {
   directPlay: boolean;
   duration: number;
 }
+
+export interface WatchProgress {
+  path: string;
+  position: number;
+  duration: number;
+  completed: boolean;
+}
+
+export interface AnimeMatch {
+  id: number;
+  title: string;
+  year?: number;
+  coverUrl?: string;
+}
+
+export interface CatalogEdit {
+  title?: string;
+  synopsis?: string;
+  match?: AnimeMatch;
+  hasImage: boolean;
+}

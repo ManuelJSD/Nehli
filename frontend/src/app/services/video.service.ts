@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable, tap } from 'rxjs';
 
-import { Video, VideoMetadata } from '../interfaces/video.interface';
+import { AnimeMatch, CatalogEdit, Video, VideoMetadata } from '../interfaces/video.interface';
 import { environments } from 'src/environments/environments';
 
 @Injectable({
@@ -34,5 +34,17 @@ export class VideoService {
 
   getVideoDuration(path: string): Observable<{ duration: number }> {
     return this.http.get<{ duration: number }>(`${this.apiUrl}/api/stream/duration?path=${encodeURIComponent(path)}`);
+  }
+
+  getCatalogEdit(category: string, title: string) {
+    return this.http.get<CatalogEdit>(this.apiUrl + '/api/video/editor', { params: { category, title } });
+  }
+
+  searchAnimeMatch(category: string, title: string, q: string) {
+    return this.http.get<AnimeMatch[]>(this.apiUrl + '/api/video/editor/anime', { params: { category, title, q } });
+  }
+
+  saveCatalogEdit(category: string, title: string, edit: { displayTitle: string; synopsis: string; animeId: number | null; image?: string | null }) {
+    return this.http.put<void>(this.apiUrl + '/api/video/editor', edit, { params: { category, title } });
   }
 }

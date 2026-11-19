@@ -1,10 +1,11 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { TreeNode } from 'primeng/api';
-import { Subscription } from 'rxjs';
+import { catchError, forkJoin, of, Subscription, timeout } from 'rxjs';
 import videojs from 'video.js';
 import { VideoMetadata, VideoTrack } from 'src/app/interfaces/video.interface';
 import { VideoService } from 'src/app/services/video.service';
+import { WatchProgressService } from 'src/app/services/watch-progress.service';
 import { environments } from 'src/environments/environments';
 
 type SubtitleStyle = {
@@ -76,6 +77,7 @@ export class VideoComponent implements OnInit, OnDestroy {
   videoRelPath = '';
   filesTree: TreeNode[] = [];
   episodeCount = 0;
+  nextEpisode?: TreeNode;
   loadingVideo = true;
   selectedNode: TreeNode | null = null;
   audios: VideoTrack[] = [];
@@ -88,6 +90,9 @@ export class VideoComponent implements OnInit, OnDestroy {
   hasTextSubtitles = false;
   subtitleStyle = readSubtitleStyle();
 
+  private episodes: TreeNode[] = [];
+  private lastProgress?: { position: number; completed: boolean };
+  private lastProgressAt = 0;
   private player?: ReturnType<typeof videojs>;
   private metadata?: VideoMetadata;
   private catalogRequest?: Subscription;
@@ -99,7 +104,7 @@ export class VideoComponent implements OnInit, OnDestroy {
   private pendingPlayback?: { time: number; paused: boolean };
   private onSourceReady?: () => void;
 
-  constructor(private route: ActivatedRoute, private videoService: VideoService) {
+  constructor(private route: ActivatedRoute, private videoService: VideoService, private progress: WatchProgressService) {
     this.category = this.route.snapshot.params['category'];
     this.subcategory = this.route.snapshot.params['subcategory'];
     this.video = this.route.snapshot.params['video'];
@@ -109,8 +114,12 @@ export class VideoComponent implements OnInit, OnDestroy {
     this.catalogRequest = this.videoService.getVideosAndThumbnails(this.category, this.subcategory).subscribe({
       next: data => {
         this.filesTree = this.buildTreeNodes(data);
-        this.episodeCount = this.countEpisodes(this.filesTree);
-        const node = this.findVideoNode(this.filesTree, this.video) || this.findVideoNode(this.filesTree);
+        this.episodes = this.flattenEpisodes(this.filesTree);
+        this.episodeCount = this.episodes.length;
+        const episode = this.route.snapshot.queryParamMap.get('episode');
+        const node = this.episodes.find(item => episode && item.data.relPath === episode)
+          || this.episodes.find(item => item.data.name === this.video)
+          || this.episodes[0];
         if (node) {
           this.seleccionarCapitulo({ node });
         } else {
@@ -126,6 +135,7 @@ export class VideoComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.saveProgress();
     this.catalogRequest?.unsubscribe();
     this.metadataRequest?.unsubscribe();
     this.clearSubtitle();
@@ -140,12 +150,13 @@ export class VideoComponent implements OnInit, OnDestroy {
     return filename.replace(/\.[a-z0-9]{2,5}$/i, '');
   }
 
-  private countEpisodes(nodes: TreeNode[]): number {
-    return nodes.reduce((total, node) => total + (node.children ? this.countEpisodes(node.children) : 1), 0);
+  private flattenEpisodes(nodes: TreeNode[]): TreeNode[] {
+    return nodes.flatMap(node => node.children ? this.flattenEpisodes(node.children) : [node]);
   }
 
   private buildTreeNodes(data: any, parentKey = ''): TreeNode[] {
-    const folders = Object.entries(data?.folders || {}).map(([label, contents]) => {
+    const compare = (a: string, b: string) => a.localeCompare(b, 'es', { numeric: true });
+    const folders = Object.entries(data?.folders || {}).sort(([a], [b]) => compare(a, b)).map(([label, contents]) => {
       const key = parentKey + encodeURIComponent(label) + '/';
       return {
         key: 'folder:' + key,
@@ -162,20 +173,46 @@ export class VideoComponent implements OnInit, OnDestroy {
       icon: 'pi pi-play',
       data: video
     }));
-    return [...folders, ...videos];
+    return [...folders, ...videos.sort((a, b) => compare(a.data.name, b.data.name))];
   }
 
-  private findVideoNode(nodes: TreeNode[], filename?: string): TreeNode | undefined {
-    for (const node of nodes) {
-      if (node.data && (filename === undefined || node.data.name === filename)) return node;
-      const child = this.findVideoNode(node.children || [], filename);
-      if (child) return child;
-    }
-    return undefined;
+  playNextEpisode(): void {
+    if (this.nextEpisode) this.seleccionarCapitulo({ node: this.nextEpisode });
+  }
+
+  @HostListener('window:pagehide')
+  saveProgress(): void {
+    const player = this.player;
+    const duration = player?.duration();
+    const current = player?.currentTime();
+    if (!player || !duration || !Number.isFinite(duration) || current === undefined ||
+        !Number.isFinite(current) || !this.metadata || this.pendingPlayback || this.loadingVideo) return;
+
+    const position = Math.max(0, Math.min(current, duration));
+    const completed = player.ended();
+    if ((!position && !this.lastProgress) ||
+        (position === this.lastProgress?.position && completed === this.lastProgress.completed)) return;
+
+    const path = this.videoRelPath;
+    const update = { position, completed };
+    this.lastProgress = update;
+    this.lastProgressAt = Date.now();
+    void this.progress.save({ path, duration, ...update }, this.lastProgressAt).then(saved => {
+      if (!saved && this.lastProgress === update) this.lastProgress = undefined;
+    });
+  }
+
+  @HostListener('document:visibilitychange')
+  saveProgressWhenHidden(): void {
+    if (document.visibilityState === 'hidden') this.saveProgress();
   }
 
   seleccionarCapitulo({ node }: { node: TreeNode }): void {
     if (!node.data || node.data.relPath === this.videoRelPath) return;
+    this.saveProgress();
+    this.lastProgress = undefined;
+    this.lastProgressAt = Date.now();
+    this.nextEpisode = this.episodes[this.episodes.findIndex(item => item.data.relPath === node.data.relPath) + 1];
     this.loadingVideo = true;
     this.video = node.data.name;
     this.videoRelPath = node.data.relPath;
@@ -193,8 +230,11 @@ export class VideoComponent implements OnInit, OnDestroy {
     this.currentSubtitleIndex = -1;
     this.playbackError = '';
 
-    this.metadataRequest = this.videoService.getVideoMetadata(this.videoRelPath).subscribe({
-      next: metadata => {
+    this.metadataRequest = forkJoin({
+      metadata: this.videoService.getVideoMetadata(this.videoRelPath),
+      progress: this.progress.get(this.videoRelPath).pipe(timeout(2500), catchError(() => of(null)))
+    }).subscribe({
+      next: ({ metadata, progress }) => {
         this.metadata = metadata;
         this.audios = metadata.audios;
         this.subtitles = metadata.subtitles;
@@ -208,7 +248,10 @@ export class VideoComponent implements OnInit, OnDestroy {
         ];
         this.currentAudioIndex = (this.audios.find(track => track.default) || this.audios[0])?.index;
         this.currentSubtitleIndex = (this.subtitles.find(track => track.default) || this.subtitles[0])?.index ?? -1;
-        this.loadSource({ time: 0, paused: false });
+        const position = progress && !progress.completed && progress.position < metadata.duration
+          ? progress.position : 0;
+        if (position > 0) this.lastProgress = { position, completed: false };
+        this.loadSource({ time: position, paused: false });
       },
       error: () => {
         this.loadingVideo = false;
@@ -275,6 +318,12 @@ export class VideoComponent implements OnInit, OnDestroy {
         controlBar: playerControls
       });
       this.player.on('error', () => { this.loadingVideo = false; });
+      this.player.on('pause', () => this.saveProgress());
+      this.player.on('ended', () => this.saveProgress());
+      this.player.on('seeked', () => this.saveProgress());
+      this.player.on('timeupdate', () => {
+        if (!this.player?.paused() && Date.now() - this.lastProgressAt >= 10000) this.saveProgress();
+      });
       this.player.on('ratechange', () => {
         const rate = this.player?.playbackRate();
         if (rate && this.player?.defaultPlaybackRate() !== rate) this.player?.defaultPlaybackRate(rate);

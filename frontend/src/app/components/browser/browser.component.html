@@ -32,6 +32,25 @@
         <img class="featured-cover" [src]="featured.imageUrl" alt="" (error)="onThumbnailError($event)">
       </section>
 
+      <section *ngIf="continueWatching.length && !query.trim() && !selectedCategory"
+               class="continue-watching" aria-labelledby="continue-watching-title">
+        <div class="results-heading">
+          <h2 id="continue-watching-title">Continuar viendo</h2>
+        </div>
+        <div class="continue-list">
+          <a *ngFor="let entry of continueWatching" class="continue-card"
+             [routerLink]="entry.playUrl" [queryParams]="{ episode: entry.path }">
+            <img [src]="entry.imageUrl" alt="" loading="lazy" decoding="async" (error)="onThumbnailError($event)">
+            <span class="continue-copy">
+              <strong>{{ entry.title }}</strong>
+              <small *ngIf="entry.episode !== entry.title">{{ entry.episode }}</small>
+              <progress [value]="entry.percent" max="100" aria-label="Progreso de reproducción"></progress>
+              <small><i class="pi pi-play" aria-hidden="true"></i> Retomar en {{ entry.time }}</small>
+            </span>
+          </a>
+        </div>
+      </section>
+
       <section *ngIf="featured; else emptyLibrary" class="catalog-results" aria-labelledby="catalog-results-title">
         <div class="results-heading">
           <h2 id="catalog-results-title">{{ selectedCategory || 'Todos los títulos' }}</h2>
@@ -70,6 +89,7 @@
     <div class="dialog-copy">
       <span class="featured-category">{{ entry.category }}<ng-container *ngIf="selectedInfo?.year"> · {{ selectedInfo?.year }}</ng-container></span>
       <h2 id="title-dialog-heading">{{ selectedInfo?.title || entry.title }}</h2>
+      <ng-container *ngIf="!editing; else editor">
       <p *ngIf="loadingDetails" role="status">Cargando información…</p>
       <p *ngIf="!loadingDetails">{{ selectedInfo?.synopsis || 'Sin sinopsis disponible.' }}</p>
       <a *ngIf="selectedInfo?.sourceUrl as source"
@@ -78,6 +98,47 @@
       <a class="play-link" [routerLink]="entry.playUrl" (click)="closeTitle()">
         <i class="pi pi-play" aria-hidden="true"></i> Reproducir
       </a>
+      <button *ngIf="canEdit" class="quiet-button" type="button" (click)="startEdit()">Editar ficha</button>
+      </ng-container>
+      <ng-template #editor>
+        <form class="catalog-editor" (ngSubmit)="saveEdit()">
+          <fieldset [disabled]="editorBusy">
+            <label>Título
+              <input name="displayTitle" [(ngModel)]="editTitle" maxlength="240" placeholder="Automático">
+            </label>
+            <label>Sinopsis
+              <textarea name="synopsis" [(ngModel)]="editSynopsis" maxlength="8000" rows="5" placeholder="Automática"></textarea>
+            </label>
+            <label>Portada (JPG, PNG, WebP o GIF, hasta 700 KiB)
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" #coverInput (change)="selectEditImage(coverInput)">
+            </label>
+            <button *ngIf="hasEditImage" type="button" class="quiet-button"
+                    (click)="editImage = null; hasEditImage = false; coverInput.value = ''">Quitar portada personalizada</button>
+            <ng-container *ngIf="isAnime">
+              <label>Coincidencia de AniList
+                <input name="animeQuery" [(ngModel)]="animeQuery" maxlength="160">
+              </label>
+              <button type="button" class="quiet-button" [disabled]="searchingAnime" (click)="searchAnime()">Buscar en AniList</button>
+              <p *ngIf="animeMatch as match">
+                {{ match.title }} <span *ngIf="match.year">({{ match.year }})</span>
+                <button type="button" class="quiet-button" (click)="animeMatch = undefined">Usar búsqueda automática</button>
+              </p>
+              <ul *ngIf="animeResults.length">
+                <li *ngFor="let result of animeResults">
+                  <button type="button" class="quiet-button" (click)="animeMatch = result; animeResults = []">
+                    {{ result.title }} <span *ngIf="result.year">({{ result.year }})</span>
+                  </button>
+                </li>
+              </ul>
+            </ng-container>
+            <div class="catalog-actions">
+              <button class="play-link" type="submit">Guardar ficha</button>
+              <button class="quiet-button" type="button" (click)="cancelEdit()">Cancelar</button>
+            </div>
+          </fieldset>
+        </form>
+      </ng-template>
+      <p *ngIf="editError" role="alert">{{ editError }}</p>
     </div>
   </div>
 </dialog>
