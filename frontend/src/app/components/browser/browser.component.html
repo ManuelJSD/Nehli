@@ -1,122 +1,83 @@
-<!-- Estado de carga -->
-<div class="browser-loading" *ngIf="isLoading">
-  <div class="loading-pulse">
-    <p-progressSpinner
-      styleClass="w-4rem h-4rem"
-      strokeWidth="6"
-      fill="transparent"
-      animationDuration="1s">
-    </p-progressSpinner>
-    <p class="loading-text">Cargando tu biblioteca...</p>
-  </div>
-</div>
-
-<!-- Estado de error -->
-<div class="browser-error" *ngIf="isError">
-  <div class="error-card">
-    <i class="pi pi-exclamation-triangle error-icon"></i>
-    <p-messages [value]="messages" [enableService]="false" [closable]="false"></p-messages>
-  </div>
-</div>
-
-<!-- Catálogo de videos -->
-<div class="browser-wrapper" *ngIf="!isLoading && !isError">
-
-  <!-- Hero Section -->
-  <div class="hero-section" *ngIf="heroVideo">
-    <div class="hero-background">
-      <img [src]="heroVideo.imageUrl" [alt]="heroVideo.title" (error)="onThumbnailError($event)">
-      <div class="hero-vignette"></div>
-      <div class="hero-vignette-bottom"></div>
-    </div>
-    <div class="hero-content">
-      <span class="hero-badge" *ngIf="heroVideo.category">{{ heroVideo.category | uppercase }}</span>
-      <h1 class="hero-title">{{ heroVideo.title }}</h1>
-      <p class="hero-synopsis">{{ heroVideo.info?.synopsis || 'Explora este título destacado en nuestra biblioteca. Haz clic en Más Información para descubrir los detalles.' }}</p>
-      
-      <div class="hero-actions">
-        <a class="btn-primary" [routerLink]="['/videos', heroVideo.category, heroVideo.title, getFirstVideoName(heroVideo.category, heroVideo.title)]">
-          <i class="pi pi-play-fill" style="margin-right: 8px;"></i> Reproducir
-        </a>
-        <button class="btn-secondary" (click)="onVideoClick(heroVideo.category, heroVideo.title)">
-          <i class="pi pi-info-circle" style="margin-right: 8px;"></i> Más información
-        </button>
+<div class="catalog-page">
+  <div class="catalog-shell">
+    <header class="catalog-header">
+      <h1>Biblioteca</h1>
+      <div class="search-field" *ngIf="!isLoading && !isError && featured">
+        <i class="pi pi-search" aria-hidden="true"></i>
+        <input type="search" aria-label="Buscar título" placeholder="Buscar título"
+               [ngModel]="query" (ngModelChange)="setQuery($event)">
       </div>
-    </div>
-  </div>
+    </header>
 
-  <!-- Grid Completa por Categoría -->
-  <div class="catalog-content">
-    <section class="category-row" *ngFor="let category of categoryKeys">
-      <h2 class="row-title">{{ category }}</h2>
-      
-      <div class="row-slider">
-        <div class="video-card" *ngFor="let subcategory of subcategoryKeysMap[category]" (click)="onVideoClick(category, subcategory)">
-          <div class="card-media">
-            <img class="card-image" [src]="getImageUrl(category, subcategory)" (error)="onThumbnailError($event)" [alt]="subcategory" loading="lazy">
-            <div class="card-overlay">
-              <i class="pi pi-play play-icon"></i>
-            </div>
-          </div>
-          <div class="card-info">
-            <h3 class="card-title" [title]="subcategory">{{ subcategory }}</h3>
+    <p *ngIf="isLoading" class="catalog-state" role="status">Cargando biblioteca…</p>
+    <div *ngIf="isError" class="catalog-state" role="alert">
+      <p>No se pudo cargar la biblioteca.</p>
+      <button type="button" class="quiet-button" (click)="loadCatalog()">Reintentar</button>
+    </div>
+
+    <ng-container *ngIf="!isLoading && !isError">
+      <section *ngIf="featured && !query.trim() && !selectedCategory" class="featured" aria-label="Título destacado">
+        <img class="featured-backdrop" [src]="featuredInfo?.coverUrl || featured.imageUrl" alt="" (error)="onThumbnailError($event)">
+        <div class="featured-copy">
+          <span class="featured-category">{{ featured.category }}</span>
+          <h2>{{ featuredInfo?.title || featured.title }}</h2>
+          <p *ngIf="featuredInfo?.synopsis">{{ featuredInfo?.synopsis }}</p>
+          <a *ngIf="featuredInfo?.sourceUrl as source"
+             class="metadata-source" [href]="source" target="_blank" rel="noopener noreferrer">Wikipedia · CC BY-SA</a>
+          <div class="catalog-actions">
+            <a class="play-link" [routerLink]="featured.playUrl"><i class="pi pi-play" aria-hidden="true"></i> Reproducir</a>
+            <button class="quiet-button" type="button" (click)="openTitle(featured)">Más información</button>
           </div>
         </div>
-      </div>
-    </section>
+        <img class="featured-cover" [src]="featured.imageUrl" alt="" (error)="onThumbnailError($event)">
+      </section>
+
+      <section *ngIf="featured; else emptyLibrary" class="catalog-results" aria-labelledby="catalog-results-title">
+        <div class="results-heading">
+          <h2 id="catalog-results-title">{{ selectedCategory || 'Todos los títulos' }}</h2>
+          <span aria-live="polite">{{ visibleTitles.length }} {{ visibleTitles.length === 1 ? 'título' : 'títulos' }}</span>
+        </div>
+        <nav class="category-filters" aria-label="Filtrar por categoría">
+          <button type="button" [attr.aria-pressed]="!selectedCategory" (click)="setCategory('')">Todas</button>
+          <button type="button" *ngFor="let category of categories"
+                  [attr.aria-pressed]="category === selectedCategory" (click)="setCategory(category)">{{ category }}</button>
+        </nav>
+        <div *ngIf="visibleTitles.length; else noResults" class="title-grid">
+          <button *ngFor="let entry of visibleTitles; trackBy: trackByTitle"
+                  class="title-card" type="button" (click)="openTitle(entry)" [attr.title]="entry.title">
+            <img [src]="entry.imageUrl" alt="" loading="lazy" decoding="async" (error)="onThumbnailError($event)">
+            <span class="card-text"><strong>{{ entry.title }}</strong><small>{{ entry.category }}</small></span>
+          </button>
+        </div>
+      </section>
+      <ng-template #emptyLibrary><p class="catalog-state">La biblioteca está vacía.</p></ng-template>
+      <ng-template #noResults>
+        <div class="catalog-state">
+          <p>No hay títulos que coincidan con los filtros.</p>
+          <button type="button" class="quiet-button" (click)="resetFilters()">Limpiar filtros</button>
+        </div>
+      </ng-template>
+    </ng-container>
   </div>
 </div>
 
-<!-- INFO MODAL (Custom) -->
-<div class="custom-modal-overlay" *ngIf="displayModal" (click)="closeModal()" [class.active]="displayModal">
-  <div class="custom-modal" (click)="$event.stopPropagation()">
-    <!-- Botón Cerrar -->
-    <button class="modal-close" (click)="closeModal()">
-      <i class="pi pi-times"></i>
+<dialog #titleDialog class="title-dialog" aria-labelledby="title-dialog-heading" (close)="clearTitle()" (click)="$event.target === titleDialog && closeTitle()">
+  <div *ngIf="selectedTitle as entry" class="dialog-content">
+    <button type="button" autofocus class="dialog-close" aria-label="Cerrar ficha" (click)="closeTitle()">
+      <i class="pi pi-times" aria-hidden="true"></i>
     </button>
-    
-    <!-- Loading State del Modal -->
-    <div class="modal-loading" *ngIf="!selectedVideoInfo">
-      <p-progressSpinner styleClass="w-3rem h-3rem" strokeWidth="4"></p-progressSpinner>
-    </div>
-
-    <!-- Contenido del Modal -->
-    <div class="modal-content-wrapper" *ngIf="selectedVideoInfo">
-      <div class="modal-hero">
-        <img [src]="selectedVideoInfo.coverUrl" class="modal-hero-bg" (error)="onThumbnailError($event)">
-        <div class="modal-hero-vignette"></div>
-        <div class="modal-hero-text">
-          <h2 class="modal-title">{{ selectedVideoInfo.title }}</h2>
-          <div class="modal-meta">
-            <span class="meta-item match-score" *ngIf="selectedVideoInfo.rating">{{ selectedVideoInfo.rating * 10 }}% para ti</span>
-            <span class="meta-item year" *ngIf="selectedVideoInfo.year">{{ selectedVideoInfo.year }}</span>
-            <span class="meta-item hd-badge">HD</span>
-          </div>
-          <div class="modal-hero-actions">
-            <a class="btn-primary modal-play-btn" [routerLink]="selectedVideoInfo.playUrl" (click)="closeModal()">
-              <i class="pi pi-play-fill" style="margin-right: 8px;"></i> Reproducir
-            </a>
-          </div>
-        </div>
-      </div>
-      
-      <div class="modal-body">
-        <div class="modal-details-grid">
-          <div class="modal-synopsis">
-            <p>{{ selectedVideoInfo.synopsis }}</p>
-          </div>
-          <div class="modal-sidebar">
-            <div class="sidebar-item" *ngIf="selectedVideoInfo.genres?.length">
-              <span class="sidebar-label">Géneros:</span>
-              <span class="sidebar-value">{{ selectedVideoInfo.genres.join(', ') }}</span>
-            </div>
-            <div class="sidebar-item" *ngIf="selectedVideoInfo.category">
-              <span class="sidebar-label">Categoría:</span>
-              <span class="sidebar-value">{{ selectedCategory }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <img [src]="selectedInfo?.coverUrl || entry.imageUrl" alt="" (error)="onThumbnailError($event)">
+    <div class="dialog-copy">
+      <span class="featured-category">{{ entry.category }}<ng-container *ngIf="selectedInfo?.year"> · {{ selectedInfo?.year }}</ng-container></span>
+      <h2 id="title-dialog-heading">{{ selectedInfo?.title || entry.title }}</h2>
+      <p *ngIf="loadingDetails" role="status">Cargando información…</p>
+      <p *ngIf="!loadingDetails">{{ selectedInfo?.synopsis || 'Sin sinopsis disponible.' }}</p>
+      <a *ngIf="selectedInfo?.sourceUrl as source"
+         class="metadata-source" [href]="source" target="_blank" rel="noopener noreferrer">Wikipedia · CC BY-SA</a>
+      <p *ngIf="selectedInfo?.genres?.length" class="genre-list">{{ selectedInfo?.genres?.join(' · ') }}</p>
+      <a class="play-link" [routerLink]="entry.playUrl" (click)="closeTitle()">
+        <i class="pi pi-play" aria-hidden="true"></i> Reproducir
+      </a>
     </div>
   </div>
-</div>
+</dialog>

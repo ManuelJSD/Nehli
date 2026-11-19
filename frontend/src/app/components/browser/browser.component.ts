@@ -1,8 +1,25 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Message } from 'primeng/api/message';
+import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { Video } from 'src/app/interfaces/video.interface';
 import { VideoService } from 'src/app/services/video.service';
 import { environments } from 'src/environments/environments';
+
+interface CatalogTitle {
+  category: string;
+  title: string;
+  searchKey: string;
+  imageUrl: string;
+  playUrl: string[];
+}
+
+interface TitleInfo {
+  title?: string;
+  synopsis?: string;
+  sourceUrl?: string;
+  coverUrl?: string;
+  year?: number;
+  genres?: string[];
+}
 
 @Component({
   selector: 'app-browser',
@@ -10,186 +27,150 @@ import { environments } from 'src/environments/environments';
   styleUrls: ['./browser.component.css']
 })
 export class BrowserComponent implements OnInit, OnDestroy {
+  @ViewChild('titleDialog', { static: true }) private titleDialog!: ElementRef<HTMLDialogElement>;
 
-  videos: Video = {};
-  /** Claves de categorías pre-calculadas para evitar llamar Object.keys() en el template */
-  categoryKeys: string[] = [];
-  /** Mapa de claves de subcategorías pre-calculadas por categoría */
-  subcategoryKeysMap: Record<string, string[]> = {};
-  /** Caché para URLs de las miniaturas: rompe el bucle de cambios de Angular */
-  private thumbnailCache: Record<string, string> = {};
-
-  isLoading = false;
+  categories: string[] = [];
+  visibleTitles: CatalogTitle[] = [];
+  featured?: CatalogTitle;
+  featuredInfo?: TitleInfo;
+  selectedTitle?: CatalogTitle;
+  selectedInfo?: TitleInfo;
+  selectedCategory = '';
+  query = '';
+  isLoading = true;
   isError = false;
-  messages: Message[] = [];
+  loadingDetails = false;
 
-  // Variables para el Hero y Modal
-  heroVideo: any = null;
-  displayModal: boolean = false;
-  selectedVideoInfo: any = null;
-  selectedCategory: string = '';
-  selectedSubcategory: string = '';
-  private rotationInterval: any;
+  private titles: CatalogTitle[] = [];
+  private catalogRequest?: Subscription;
+  private featuredRequest?: Subscription;
+  private detailRequest?: Subscription;
 
-  private baseUrl: string = environments.baseURL;
-
-  constructor(private videoService: VideoService) { }
+  constructor(private videoService: VideoService, private changeDetector: ChangeDetectorRef) {}
 
   ngOnInit(): void {
+    this.loadCatalog();
+  }
+
+  ngOnDestroy(): void {
+    this.catalogRequest?.unsubscribe();
+    this.featuredRequest?.unsubscribe();
+    this.detailRequest?.unsubscribe();
+  }
+
+  loadCatalog(): void {
+    this.catalogRequest?.unsubscribe();
+    this.featuredRequest?.unsubscribe();
     this.isLoading = true;
-    this.videoService.getVideos().subscribe({
-      next: (videos) => {
-        this.videos = videos;
-        this.categoryKeys = Object.keys(videos);
-        this.categoryKeys.forEach(cat => {
-          this.subcategoryKeysMap[cat] = Object.keys(videos[cat]);
-        });
-
-        // Seleccionar video destacado aleatorio al inicio
-        this.setRandomHero();
-
-        // Configurar rotación cada 30 segundos
-        this.rotationInterval = setInterval(() => {
-          this.setRandomHero();
-        }, 30000);
-
+    this.isError = false;
+    this.catalogRequest = this.videoService.getVideos().subscribe({
+      next: videos => {
+        this.titles = this.buildCatalog(videos);
+        this.categories = Array.from(new Set(this.titles.map(entry => entry.category)));
+        this.featured = this.titles[0];
+        this.featuredInfo = undefined;
+        this.applyFilters();
         this.isLoading = false;
+        if (this.featured) {
+          const { category, title } = this.featured;
+          this.featuredRequest = this.videoService.getVideoInfo(category, title).subscribe({
+            next: info => { this.featuredInfo = info; },
+            error: () => {}
+          });
+        }
       },
       error: () => {
-        this.messages.push({
-          severity: 'error',
-          summary: 'Error al cargar',
-          detail: 'No se pudieron cargar los videos. Comprueba la conexión.'
-        });
-        this.isError = true;
         this.isLoading = false;
+        this.isError = true;
       }
     });
   }
 
-  getImageUrl(category: string, subcategory: string): string {
-    const cacheKey = `${category}-${subcategory}`;
-    if (this.thumbnailCache[cacheKey]) {
-      return this.thumbnailCache[cacheKey];
-    }
-
-    let urlToReturn = '';
-    const thumbnails = this.videos[category]?.[subcategory]?.thumbnails;
-    if (thumbnails && thumbnails[0]) {
-      urlToReturn = `${this.baseUrl}/ngNehli/videos/${category}/${subcategory}/${thumbnails[0]}`;
-    } else {
-      // Si no hay miniatura local, pedimos al backend que busque una en bases de datos (APIs libres)
-      urlToReturn = `${this.baseUrl}/api/video/thumbnail?category=${encodeURIComponent(category)}&title=${encodeURIComponent(subcategory)}`;
-    }
-
-    // Guardar en caché antes de retornar para evitar que Angular reevalúe infinitamente
-    this.thumbnailCache[cacheKey] = urlToReturn;
-    return urlToReturn;
+  setCategory(category: string): void {
+    this.selectedCategory = category;
+    this.applyFilters();
   }
 
-  /**
-   * Busca recursivamente el primer video disponible en la jerarquía (útil si está en Temporada 1 > DVD 1)
-   */
-  getFirstVideoName(category: string, subcategory: string): string {
-    const node = this.videos[category]?.[subcategory];
-    if (!node) return 'unknown';
-    return this.findFirstVideoInTree(node);
+  setQuery(query: string): void {
+    this.query = query;
+    this.applyFilters();
   }
 
-  private findFirstVideoInTree(node: any): string {
-    if (node.videos && node.videos.length > 0) {
-      return node.videos[0].name;
+  resetFilters(): void {
+    this.query = '';
+    this.selectedCategory = '';
+    this.applyFilters();
+  }
+
+  openTitle(entry: CatalogTitle): void {
+    this.detailRequest?.unsubscribe();
+    this.selectedTitle = entry;
+    this.selectedInfo = undefined;
+    this.loadingDetails = true;
+    this.changeDetector.detectChanges();
+    this.titleDialog.nativeElement.showModal();
+    this.detailRequest = this.videoService.getVideoInfo(entry.category, entry.title).subscribe({
+      next: info => {
+        this.selectedInfo = info;
+        this.loadingDetails = false;
+      },
+      error: () => { this.loadingDetails = false; }
+    });
+  }
+
+  closeTitle(): void {
+    this.titleDialog.nativeElement.close();
+  }
+
+  clearTitle(): void {
+    this.detailRequest?.unsubscribe();
+    this.selectedTitle = undefined;
+  }
+
+  onThumbnailError(event: Event): void {
+    const image = event.target as HTMLImageElement;
+    if (!image.src.endsWith('/miniatura_default.webp')) {
+      image.src = 'assets/images/miniatura_default.webp';
     }
-    if (node.folders) {
-      for (const folderName in node.folders) {
-        const found = this.findFirstVideoInTree(node.folders[folderName]);
-        if (found) return found;
-      }
+  }
+
+  trackByTitle(index: number, entry: CatalogTitle): CatalogTitle {
+    return entry;
+  }
+
+  private applyFilters(): void {
+    const search = this.normalize(this.query.trim());
+    this.visibleTitles = this.titles.filter(entry =>
+      (!this.selectedCategory || entry.category === this.selectedCategory) && entry.searchKey.includes(search)
+    );
+  }
+
+  private buildCatalog(catalog: Video): CatalogTitle[] {
+    return Object.entries(catalog).flatMap(([category, entries]) =>
+      Object.entries(entries).map(([title, entry]) => {
+        const thumbnailParams = new URLSearchParams({ category, title });
+        return {
+          category,
+          title,
+          searchKey: this.normalize(title),
+          imageUrl: environments.baseURL + '/api/video/thumbnail?' + thumbnailParams,
+          playUrl: ['/videos', category, title, this.findFirstVideo(entry)]
+        };
+      })
+    );
+  }
+
+  private findFirstVideo(node: Video[string][string]): string {
+    const first = node.videos?.[0];
+    if (first) return first.name;
+    for (const folder of Object.values<Video[string][string]>(node.folders || {})) {
+      const filename = this.findFirstVideo(folder);
+      if (filename) return filename;
     }
     return '';
   }
 
-  onThumbnailError(event: Event): void {
-    const imgElement = event.target as HTMLImageElement;
-    // Prevenir buble infinito si la imagen por defecto también falla
-    if (!imgElement.src.includes('miniatura_default.webp')) {
-      imgElement.src = 'assets/images/miniatura_default.webp';
-    }
-  }
-
-  onVideoClick(category: string, subcategory: string): void {
-    this.selectedCategory = category;
-    this.selectedSubcategory = subcategory;
-    this.displayModal = true;
-    this.selectedVideoInfo = null; // Loading state
-
-    this.videoService.getVideoInfo(category, subcategory).subscribe({
-      next: (info) => {
-        // Combinamos la info de la API externa con nuestra URL de Play
-        this.selectedVideoInfo = {
-          ...info,
-          playUrl: ['/videos', category, subcategory, this.getFirstVideoName(category, subcategory)],
-          // Fallback a imagen default si no hay
-          coverUrl: info.coverUrl || this.getImageUrl(category, subcategory)
-        };
-      },
-      error: () => {
-        // En caso de error, poner valores por defecto para permitir reproducir igualmente
-        this.selectedVideoInfo = {
-          title: subcategory,
-          synopsis: 'Información no disponible.',
-          playUrl: ['/videos', category, subcategory, this.getFirstVideoName(category, subcategory)],
-          coverUrl: this.getImageUrl(category, subcategory)
-        };
-      }
-    });
-  }
-
-  closeModal(): void {
-    this.displayModal = false;
-  }
-
-  /**
-   * TrackBy para el *ngFor de categorías y subcategorías.
-   * Evita destruir/recrear el DOM cuando el array no cambia.
-   */
-  trackByKey(index: number, key: string): string {
-    return key;
-  }
-
-  ngOnDestroy(): void {
-    if (this.rotationInterval) {
-      clearInterval(this.rotationInterval);
-    }
-  }
-
-  /**
-   * Selecciona un video completamente aleatorio del catálogo actual
-   */
-  private setRandomHero(): void {
-    if (this.categoryKeys.length === 0) return;
-
-    const randomCat = this.categoryKeys[Math.floor(Math.random() * this.categoryKeys.length)];
-    const subs = this.subcategoryKeysMap[randomCat];
-
-    if (subs && subs.length > 0) {
-      const randomSub = subs[Math.floor(Math.random() * subs.length)];
-
-      this.heroVideo = {
-        category: randomCat,
-        title: randomSub,
-        imageUrl: this.getImageUrl(randomCat, randomSub),
-        info: null // Reset info while loading new one
-      };
-
-      // Cargar info detallada del nuevo hero
-      this.videoService.getVideoInfo(randomCat, randomSub).subscribe({
-        next: (info) => {
-          if (this.heroVideo && this.heroVideo.title === randomSub) {
-            this.heroVideo.info = info;
-          }
-        }
-      });
-    }
+  private normalize(value: string): string {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   }
 }

@@ -93,3 +93,22 @@ Por defecto, los servicios de la aplicación serán desplegados y escucharán a 
 
 - [🏠 Volver al README Principal](../README.md)
 - [🧩 Ir al README del Frontend](../frontend/README.md)
+
+## Portadas y fichas locales
+
+Nehli compara el título con los resultados externos y usa el año de estreno cuando aparece entre paréntesis en el nombre. Si ninguna fuente devuelve una portada válida, se genera una captura del vídeo. Las fichas de películas también pueden mostrar un extracto de Wikipedia con enlace a la fuente. Para corregir una ficha, guarda un archivo de metadatos junto a los vídeos.
+
+- Si el título está en una carpeta, usa `VIDEO_FOLDER/Series/Mi serie/metadata.json`.
+- Si el vídeo está directamente en una categoría, usa el mismo nombre base. Junto a `Mi película (2024).mkv`, guarda `Mi película (2024).metadata.json`.
+
+```json
+{
+  "title": "Mi película",
+  "year": 2024,
+  "synopsis": "La sinopsis que quieres mostrar.",
+  "genres": ["Drama"],
+  "cover": "portada.webp"
+}
+```
+
+Los campos son opcionales y prevalecen sobre los datos externos. Guarda la imagen junto al JSON e indica su nombre en `cover`. Para cambiar solo la portada, en una carpeta basta con una imagen llamada `poster`, `cover` o `portada`. Para un vídeo suelto, usa una imagen con el mismo nombre base que el vídeo. Se admiten JPG, PNG, WebP y GIF.

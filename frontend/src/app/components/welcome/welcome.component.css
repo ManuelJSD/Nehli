@@ -1,456 +1,180 @@
-/* ============================================
-   Nehli Welcome — Diseño Cinematográfico
-   Hereda tokens globales de styles.css
-   ============================================ */
-
-@keyframes badgeShimmer {
-  0% {
-    background-position: -200% center;
-  }
-
-  100% {
-    background-position: 200% center;
-  }
+:host {
+  display: block;
 }
 
-@keyframes grain {
-
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-
-  10% {
-    transform: translate(-5%, -10%);
-  }
-
-  30% {
-    transform: translate(3%, -15%);
-  }
-
-  50% {
-    transform: translate(12%, 9%);
-  }
-
-  70% {
-    transform: translate(9%, 4%);
-  }
-
-  90% {
-    transform: translate(-1%, 7%);
-  }
-}
-
-/* ---------- Página base ---------- */
 .welcome-page {
-  position: relative;
-  min-height: 100vh;
-  background-color: var(--neh-bg-deep);
-  background-image: url("../../../assets/images/welcome-bg.webp");
-  background-size: cover;
-  background-position: center top;
-  background-attachment: fixed;
-  color: var(--neh-text);
-  font-family: var(--neh-font-body);
+  --welcome-gutter: clamp(1rem, 6vw, 6.5rem);
+  --welcome-line: #263449;
+  --welcome-ink: #f0f5ff;
+  --welcome-muted: #b2bfd4;
+  min-height: 85vh;
+  color: var(--welcome-ink);
+  background: var(--neh-bg-deep);
+}
+
+.welcome-header {
   display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-}
-
-.bg-overlay {
-  position: fixed;
-  inset: 0;
-  background:
-    linear-gradient(180deg,
-      rgba(7, 9, 15, 0.45) 0%,
-      rgba(7, 9, 15, 0.70) 40%,
-      rgba(7, 9, 15, 0.92) 75%,
-      var(--neh-bg-deep) 100%);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.bg-grain {
-  position: fixed;
-  inset: -50%;
-  width: 200%;
-  height: 200%;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 2;
-  animation: grain 8s steps(10) infinite;
-  opacity: 0.4;
-}
-
-/* ---------- Header ---------- */
-.header {
-  position: relative;
-  z-index: 10;
-  display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  padding: 1.25rem 2.5rem;
-  animation: neh-fadeIn 0.8s ease-out both;
+  gap: 1rem;
+  min-height: 4.7rem;
+  padding: 0.7rem var(--welcome-gutter);
+  border-bottom: 1px solid var(--welcome-line);
+  background: #0c111c;
 }
 
-.logo {
-  width: 7rem;
-  filter: drop-shadow(0 2px 12px rgba(79, 138, 255, 0.2));
-  transition: filter 0.3s ease, transform 0.3s ease;
+.welcome-header img {
+  display: block;
+  width: clamp(5rem, 8vw, 6.5rem);
+  height: auto;
 }
 
-.logo:hover {
-  filter: drop-shadow(0 4px 20px rgba(79, 138, 255, 0.35));
-  transform: scale(1.04);
-}
-
-.nav-buttons {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-:host ::ng-deep .btn-login.p-button {
-  background: var(--neh-glass) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: var(--neh-text) !important;
-  backdrop-filter: blur(12px);
-  border-radius: var(--neh-radius-sm) !important;
-  font-family: var(--neh-font-body) !important;
-  font-weight: 500 !important;
-  transition: all 0.25s ease !important;
-}
-
-:host ::ng-deep .btn-login.p-button:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(255, 255, 255, 0.22) !important;
-  transform: translateY(-1px);
-}
-
-:host ::ng-deep .btn-register.p-button {
-  background: var(--neh-accent) !important;
-  border: none !important;
-  color: #fff !important;
-  border-radius: var(--neh-radius-sm) !important;
-  font-family: var(--neh-font-body) !important;
-  font-weight: 600 !important;
-  box-shadow: 0 4px 20px var(--neh-accent-glow) !important;
-  transition: all 0.25s ease !important;
-}
-
-:host ::ng-deep .btn-register.p-button:hover {
-  background: var(--neh-accent-hover) !important;
-  box-shadow: 0 6px 28px rgba(79, 138, 255, 0.5) !important;
-  transform: translateY(-2px);
-}
-
-/* ---------- Hero ---------- */
-.hero {
-  position: relative;
-  z-index: 10;
-  flex: 1;
-  display: flex;
+.nav-login,
+.create-account {
+  display: inline-flex;
+  min-height: 2.65rem;
   align-items: center;
   justify-content: center;
-  padding: 4rem 2.5rem 2rem;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav-login {
+  border: 1px solid #394861;
+  background: #131d2d;
+  font-size: 0.9rem;
+}
+
+.nav-login:hover {
+  background: #202e45;
+}
+
+.welcome-hero {
+  display: grid;
+  align-items: center;
+  min-height: clamp(29rem, 43vw, 39rem);
+  padding: 4rem var(--welcome-gutter);
+  background:
+    linear-gradient(90deg, #080d17 2%, rgba(8, 13, 23, 0.96) 23%, rgba(8, 13, 23, 0.55) 51%, rgba(8, 13, 23, 0.06) 82%),
+    radial-gradient(ellipse at 76% 65%, rgba(45, 111, 222, 0.24), transparent 54%),
+    url('../../../assets/images/welcome-bg.webp') center 52% / cover no-repeat;
 }
 
 .hero-content {
-  max-width: 780px;
-  text-align: center;
+  width: min(100%, 39rem);
 }
 
-.hero-glow {
-  position: absolute;
-  top: 35%;
-  left: 50%;
-  width: 600px;
-  height: 600px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--neh-accent-glow) 0%, transparent 70%);
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 5;
-  animation: neh-glowPulse 6s ease-in-out infinite;
+.hero-content h1 {
+  margin: 0;
+  font: 700 clamp(3.4rem, 7.35vw, 7rem)/0.98 var(--neh-font-display);
+  letter-spacing: -0.05em;
 }
 
-.hero-badge {
-  display: inline-block;
-  padding: 0.5rem 1.25rem;
-  border-radius: 100px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--neh-accent);
-  border: 1px solid rgba(79, 138, 255, 0.25);
-  background: linear-gradient(90deg, transparent 0%, rgba(79, 138, 255, 0.08) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: neh-fadeInUp 0.7s ease-out 0.2s both, badgeShimmer 4s ease-in-out infinite;
-  margin-bottom: 2rem;
+.hero-content h1 span {
+  color: #9cc2ff;
 }
 
-.hero-title {
-  font-family: var(--neh-font-display);
-  font-weight: 800;
-  font-size: clamp(2.2rem, 5vw, 3.8rem);
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-  color: #fff;
-  margin: 0 0 1.5rem;
-  animation: neh-fadeInUp 0.7s ease-out 0.35s both;
+.hero-content p {
+  max-width: 31rem;
+  margin: 1.45rem 0 0;
+  color: var(--welcome-muted);
+  font-size: clamp(1rem, 1.6vw, 1.22rem);
+  line-height: 1.6;
 }
 
-.title-accent {
-  display: block;
-  background: linear-gradient(135deg, var(--neh-accent) 0%, #a78bfa 50%, var(--neh-accent-warm) 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.hero-actions {
+  margin-top: 1.85rem;
 }
 
-.hero-subtitle {
-  font-size: clamp(1rem, 2vw, 1.2rem);
-  line-height: 1.7;
-  color: var(--neh-text-muted);
-  margin: 0 auto 2.5rem;
-  max-width: 550px;
-  animation: neh-fadeInUp 0.7s ease-out 0.5s both;
-}
-
-.hero-cta {
-  display: flex;
+.create-account {
   gap: 1rem;
-  justify-content: center;
-  flex-wrap: wrap;
-  animation: neh-fadeInUp 0.7s ease-out 0.65s both;
+  min-height: 3.25rem;
+  padding-inline: 1.25rem;
+  background: #c6dcff;
+  color: #0d1b32;
 }
 
-:host ::ng-deep .btn-cta.p-button {
-  background: var(--neh-accent-gradient) !important;
-  border: none !important;
-  color: #fff !important;
-  border-radius: var(--neh-radius) !important;
-  font-family: var(--neh-font-display) !important;
-  font-weight: 600 !important;
-  font-size: 1.05rem !important;
-  padding: 0.9rem 2.2rem !important;
-  box-shadow: 0 8px 32px var(--neh-accent-glow) !important;
-  transition: all 0.3s ease !important;
+.create-account:hover {
+  background: #e0ecff;
 }
 
-:host ::ng-deep .btn-cta.p-button:hover {
-  transform: translateY(-3px) scale(1.02) !important;
-  box-shadow: 0 12px 40px rgba(79, 138, 255, 0.55) !important;
+.welcome-page a:focus-visible {
+  outline: 2px solid #a6c7ff;
+  outline-offset: 4px;
 }
 
-:host ::ng-deep .btn-cta-secondary.p-button {
-  color: var(--neh-text-muted) !important;
-  font-family: var(--neh-font-body) !important;
-  font-weight: 500 !important;
-  border-radius: var(--neh-radius) !important;
-  transition: all 0.25s ease !important;
-}
-
-:host ::ng-deep .btn-cta-secondary.p-button:hover {
-  color: #fff !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-}
-
-/* ---------- Features ---------- */
-.features {
-  position: relative;
-  z-index: 10;
+.welcome-features {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.25rem;
-  padding: 2rem 2.5rem 3rem;
-  max-width: 1100px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--welcome-line);
+  padding: 0 var(--welcome-gutter);
+  background: #101622;
 }
 
-.feature-card {
-  background: var(--neh-glass);
-  border: 1px solid var(--neh-glass-border);
-  border-radius: var(--neh-radius);
-  padding: 2rem 1.5rem;
-  text-align: center;
-  backdrop-filter: blur(16px);
-  transition: all 0.35s ease;
-  animation: neh-fadeInUp 0.6s ease-out both;
-}
-
-.feature-card:nth-child(1) {
-  animation-delay: 0.8s;
-}
-
-.feature-card:nth-child(2) {
-  animation-delay: 0.9s;
-}
-
-.feature-card:nth-child(3) {
-  animation-delay: 1.0s;
-}
-
-.feature-card:nth-child(4) {
-  animation-delay: 1.1s;
-}
-
-.feature-card:hover {
-  background: rgba(79, 138, 255, 0.06);
-  border-color: var(--neh-glass-border-hover);
-  transform: translateY(-6px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-}
-
-.feature-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: var(--neh-radius);
-  background: linear-gradient(135deg, rgba(79, 138, 255, 0.15), rgba(99, 102, 241, 0.10));
+.welcome-features article {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.2rem;
-  transition: transform 0.3s ease;
+  gap: 0.95rem;
+  padding: 1.7rem 1.6rem;
 }
 
-.feature-card:hover .feature-icon {
-  transform: scale(1.1) rotate(-4deg);
+.welcome-features article:first-child {
+  padding-inline-start: 0;
 }
 
-.feature-icon i {
-  font-size: 1.35rem;
-  color: var(--neh-accent);
+.welcome-features article + article {
+  border-inline-start: 1px solid var(--welcome-line);
 }
 
-.feature-title {
-  font-family: var(--neh-font-display);
-  font-weight: 600;
-  font-size: 1rem;
-  color: #fff;
-  margin: 0 0 0.5rem;
+.welcome-features .pi {
+  display: grid;
+  flex: 0 0 2.45rem;
+  height: 2.45rem;
+  place-items: center;
+  border-radius: 8px;
+  background: #1b2b45;
+  color: #a6c7ff;
 }
 
-.feature-desc {
-  font-size: 0.85rem;
-  line-height: 1.55;
-  color: var(--neh-text-muted);
+.welcome-features h2 {
+  margin: 0 0 0.3rem;
+  font: 600 1.18rem/1.25 var(--neh-font-display);
+}
+
+.welcome-features p {
   margin: 0;
+  color: var(--welcome-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
-/* ---------- Footer ---------- */
-.welcome-footer {
-  position: relative;
-  z-index: 10;
-  text-align: center;
-  padding: 2rem;
-  color: var(--neh-text-dim);
-  font-size: 0.8rem;
-  letter-spacing: 0.04em;
-  animation: neh-fadeIn 1s ease-out 1.3s both;
-}
-
-.welcome-footer p {
-  margin: 0;
-}
-
-/* ---------- Responsive ---------- */
-@media screen and (max-width: 1024px) {
-  .features {
-    grid-template-columns: repeat(2, 1fr);
-    max-width: 600px;
-  }
-}
-
-@media screen and (max-width: 768px) {
-  .header {
-    padding: 1rem 1.25rem;
+@media (max-width: 760px) {
+  .welcome-hero {
+    align-items: end;
+    min-height: 31rem;
+    padding-block: 8.5rem 2.6rem;
+    background:
+      linear-gradient(180deg, rgba(8, 13, 23, 0.12) 0%, #080d17 75%),
+      url('../../../assets/images/welcome-bg.webp') 61% top / auto 66% no-repeat,
+      #080d17;
   }
 
-  .logo {
-    width: 5.5rem;
+  .hero-content h1 {
+    font-size: clamp(2.85rem, 11vw, 4.8rem);
   }
 
-  .nav-buttons {
-    gap: 0.5rem;
+  .welcome-features {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  :host ::ng-deep .nav-buttons .p-button {
-    font-size: 0.8rem !important;
-    padding: 0.45rem 0.8rem !important;
+  .welcome-features article {
+    padding: 1.15rem 0;
   }
 
-  .hero {
-    padding: 2rem 1.25rem 1rem;
-  }
-
-  .hero-badge {
-    font-size: 0.7rem;
-    padding: 0.4rem 1rem;
-  }
-
-  .hero-subtitle br {
-    display: none;
-  }
-
-  .hero-glow {
-    width: 350px;
-    height: 350px;
-  }
-
-  .features {
-    grid-template-columns: repeat(2, 1fr);
-    padding: 1rem 1.25rem 2rem;
-    gap: 0.75rem;
-  }
-
-  .feature-card {
-    padding: 1.5rem 1rem;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .header {
-    padding: 0.75rem 1rem;
-  }
-
-  .logo {
-    width: 4.5rem;
-  }
-
-  .hero {
-    padding: 1.5rem 1rem 1rem;
-  }
-
-  .hero-title {
-    font-size: 1.8rem;
-  }
-
-  .hero-subtitle {
-    font-size: 0.95rem;
-  }
-
-  .hero-cta {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  :host ::ng-deep .btn-cta.p-button,
-  :host ::ng-deep .btn-cta-secondary.p-button {
-    width: 100% !important;
-    max-width: 280px !important;
-    justify-content: center !important;
-  }
-
-  .features {
-    grid-template-columns: 1fr;
-    max-width: 340px;
-  }
-
-  .feature-card {
-    padding: 1.25rem 1rem;
+  .welcome-features article + article {
+    border-inline-start: 0;
+    border-top: 1px solid var(--welcome-line);
   }
 }
