@@ -14,4 +14,10 @@ export class TarjetasComponent {
     puntuacion: number,
     url: string
   };
+  useFallbackImage(event: Event): void {
+    const image = event.target as HTMLImageElement;
+    if (!image.src.endsWith('/miniatura_default.webp')) {
+      image.src = 'assets/images/miniatura_default.webp';
+    }
+  }
 }

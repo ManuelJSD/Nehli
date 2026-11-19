@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { PopularesComponent } from './pages/populares/populares.component';
 import { TemporadaComponent } from './pages/temporada/temporada.component';
 import { GenerosComponent } from './pages/generos/generos.component';
@@ -20,6 +21,7 @@ import { TarjetasComponent } from './components/tarjetas/tarjetas.component';
   ],
   imports: [
     CommonModule,
+    RouterModule,
     FormsModule,
     ReactiveFormsModule,
     PrimeNgModule,

@@ -16,28 +16,28 @@ export class NavbarComponent {
   ngOnInit() {
     this.items = [
       {
-        label: 'Inicio',
+        label: 'Biblioteca',
         icon: 'pi pi-fw pi-home',
-        routerLink: 'browser'
+        routerLink: '/browser'
       },
       {
-        label: 'Seguimiento de Anime',
+        label: 'Anime',
         icon: 'pi pi-desktop',
         items: [
           {
             label: 'Populares',
             icon: 'pi pi-star-fill',
-            routerLink: 'populares'
+            routerLink: '/populares'
           },
           {
-            label: 'Temporada',
+            label: 'Temporadas',
             icon: 'pi pi-align-left',
-            routerLink: 'temporada'
+            routerLink: '/temporada'
           },
           {
-            label: 'Genero',
+            label: 'Géneros',
             icon: 'pi pi-tag',
-            routerLink: 'generos'
+            routerLink: '/generos'
           },
         ]
       },

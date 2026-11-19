@@ -1,26 +1,21 @@
 <div class="auth-page">
-  <div class="bg-overlay"></div>
 
-  <!-- Header -->
   <header class="auth-header">
     <a routerLink="/" class="logo-link" aria-label="Volver al inicio">
       <img src="assets/images/logo.webp" alt="Nehli" class="logo">
     </a>
   </header>
 
-  <!-- Formulario -->
-  <main class="auth-main">
+  <div class="auth-main">
+    <div class="auth-art" aria-hidden="true"></div>
     <div class="auth-card">
-      <div class="card-glow"></div>
 
-      <h1 class="auth-title">Crear tu cuenta</h1>
-      <p class="auth-subtitle">Únete a Nehli y descubre tu entretenimiento</p>
+      <h1 class="auth-title">Crear cuenta</h1>
 
       <form (ngSubmit)="onSubmit()" class="auth-form">
-        <!-- Campo usuario -->
         <div class="form-group">
           <label for="reg-username" class="form-label">
-            <i class="pi pi-user"></i>
+            <i class="pi pi-user" aria-hidden="true"></i>
             Usuario
           </label>
           <input
@@ -34,11 +29,10 @@
             class="form-input">
         </div>
 
-        <!-- Campo email -->
         <div class="form-group">
           <label for="reg-email" class="form-label">
-            <i class="pi pi-envelope"></i>
-            Email
+            <i class="pi pi-envelope" aria-hidden="true"></i>
+            Correo electrónico
           </label>
           <input
             id="reg-email"
@@ -51,10 +45,9 @@
             class="form-input">
         </div>
 
-        <!-- Campo contraseña -->
         <div class="form-group">
           <label for="reg-password" class="form-label">
-            <i class="pi pi-lock"></i>
+            <i class="pi pi-lock" aria-hidden="true"></i>
             Contraseña
           </label>
           <input
@@ -68,13 +61,11 @@
             class="form-input">
         </div>
 
-        <!-- Mensaje de error -->
         <div *ngIf="registerError" class="error-banner" role="alert">
-          <i class="pi pi-exclamation-circle"></i>
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
           <span>{{ errorMessage }}</span>
         </div>
 
-        <!-- Botón submit -->
         <button
           pButton
           type="submit"
@@ -85,11 +76,10 @@
         </button>
       </form>
 
-      <!-- Link a login -->
       <div class="auth-footer">
         <span class="footer-text">¿Ya tienes cuenta?</span>
         <a routerLink="/login" class="footer-link">Iniciar sesión</a>
       </div>
     </div>
-  </main>
+  </div>
 </div>

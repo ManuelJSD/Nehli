@@ -215,19 +215,6 @@ async function searchWiki(identity, language) {
     return findMatch(entries, identity);
 }
 
-async function searchJikan(title) {
-    const params = new URLSearchParams({ q: title, limit: '8' });
-    const answer = await request('https://api.jikan.moe/v4/anime?' + params);
-    return (answer?.data || []).map(anime => ({
-        titles: [anime.title, ...(anime.titles || []).map(item => item.title)],
-        year: anime.aired?.prop?.from?.year || anime.year,
-        synopsis: anime.synopsis,
-        rating: anime.score ?? null,
-        genres: (anime.genres || []).map(genre => genre.name),
-        coverUrl: anime.images?.jpg?.large_image_url
-    }));
-}
-
 function firstVideo(entry) {
     if (entry?.videos?.length) return entry.videos[0];
     for (const child of Object.values(entry?.folders || {})) {
@@ -290,7 +277,7 @@ async function resolveExternal(category, identity) {
     if (!identity.key) return undefined;
     if (normalizedCategory === 'anime') {
         const search = /\bseason \d+$/.test(identity.key) ? identity.key : identity.title;
-        const anime = findMatch(await searchAnime(search), identity) || findMatch(await searchJikan(search), identity);
+        const anime = findMatch(await searchAnime(search), identity);
         if (anime) return anime;
         if (!/\b(?:movie|pelicula|infinity castle|mugen jou hen)\b/.test(identity.key)) return undefined;
     }

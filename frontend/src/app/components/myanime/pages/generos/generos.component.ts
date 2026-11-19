@@ -1,31 +1,19 @@
-import { Component, OnInit } from '@angular/core';
-import { MyanimeService } from '../../../../services/myanime.service';
-import { Message } from 'primeng/api/message';
-import { Datum } from 'src/app/interfaces/anime.interface';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { AnimeCard, MyanimeService } from '../../../../services/myanime.service';
 
-interface Gen {
-  name: string,
-  id: number
+interface Genre {
+  name: string;
+  id: number;
 }
 
 @Component({
   selector: 'app-generos',
   templateUrl: './generos.component.html',
-  styleUrls: ['./generos.component.css']
+  styleUrls: ['../anime-page.css']
 })
-export class GenerosComponent implements OnInit {
-
-  generos: any[];
-  paginaActual: number = 1;
-  selectedGenero: Gen;
-  generosAnime: Datum[] = [];
-
-  isLoading = false;
-  isError = false;
-  messages: Message[] = [];
-
-  constructor(private MyanimeService: MyanimeService) {
-    this.generos = [
+export class GenerosComponent implements OnInit, OnDestroy {
+  generos: Genre[] = [
       { name: "Acción", id: 1 },
       { name: "Aventuras", id: 2 },
       { name: "Carreras", id: 3 },
@@ -70,53 +58,42 @@ export class GenerosComponent implements OnInit {
       { name: "Seinen", id: 42 },
       { name: "Josei", id: 43 }
     ];
+  selectedGenero = this.generos[0];
+  paginaActual = 1;
+  pageCount = 1;
+  generosAnime: AnimeCard[] = [];
+  isLoading = true;
+  isError = false;
+  private request?: Subscription;
 
-    this.selectedGenero = this.generos[0];
+  constructor(private animeService: MyanimeService) {}
 
-    this.obtenerGenero();
+  ngOnInit(): void { this.load(); }
+  ngOnDestroy(): void { this.request?.unsubscribe(); }
+
+  selectGenre(genre: Genre): void {
+    this.selectedGenero = genre;
+    this.paginaActual = 1;
+    this.load();
   }
 
-  ngOnInit(): void { }
+  selectPage(page: number): void {
+    if (page < 1 || page > this.pageCount) return;
+    this.paginaActual = page;
+    this.load();
+  }
 
-  obtenerGenero() {
-     this.MyanimeService.obtenerGeneros(this.selectedGenero.id, this.paginaActual).subscribe(
-      (datos) => {
-        this.generosAnime = datos
+  load(): void {
+    this.request?.unsubscribe();
+    this.isLoading = true;
+    this.isError = false;
+    this.request = this.animeService.obtenerGeneros(this.selectedGenero.id, this.paginaActual).subscribe({
+      next: result => {
+        this.generosAnime = result.data;
+        this.pageCount = result.pagination.last_visible_page;
         this.isLoading = false;
       },
-      (error) => {
-        this.messages.push({ severity: 'error', summary: 'Error', detail: error });
-        this.isError = true;
-        this.isLoading = false;
-      }
-    );
+      error: () => { this.isError = true; this.isLoading = false; }
+    });
   }
-
-  get PagGenero() {
-    return (this.MyanimeService.pagGeneros / 100);
-  }
-
-  cambioPagina(avanzar: boolean) {
-    if (avanzar) {
-      if (this.paginaActual != this.PagGenero) {
-        this.paginaActual += 1;
-      }
-
-    } else {
-      if (this.paginaActual > 1) {
-        this.paginaActual -= 1;
-
-      }
-    }
-
-    this.obtenerGenero();
-  }
-
-  especificarPagina(numero: number) {
-
-    this.MyanimeService.obtenerGeneros(this.selectedGenero.id, numero);
-    this.paginaActual = numero;
-
-  }
-
 }

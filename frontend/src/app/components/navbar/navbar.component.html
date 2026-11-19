@@ -1,10 +1,11 @@
 <p-menubar [model]="items">
   <ng-template pTemplate="start">
-    <img src="assets/images/logo.webp" alt="Nehli" class="navbar-logo" routerLink="/browser" />
+    <a routerLink="/browser" aria-label="Nehli · Biblioteca"><img src="assets/images/logo.webp" alt="Nehli" class="navbar-logo"></a>
   </ng-template>
   <ng-template pTemplate="end">
     <button
       pButton
+      type="button"
       label="Salir"
       icon="pi pi-sign-out"
       class="btn-logout"

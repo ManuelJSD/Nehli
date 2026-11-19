@@ -1,74 +1,38 @@
-<div class="neh-page anime-page">
-  <!-- Header -->
-  <header class="page-header">
-    <h1 class="neh-page-title">Géneros de Anime</h1>
-    <p class="neh-page-subtitle">Explora animes por género</p>
-  </header>
-
-  <!-- Controles -->
-  <div class="controls-bar">
-    <div class="control-group">
-      <label for="genero-dropdown" class="control-label">
-        <i class="pi pi-tag"></i>
-        Género
-      </label>
-      <p-dropdown id="genero-dropdown" [options]="generos" (onChange)="obtenerGenero()" [(ngModel)]="selectedGenero"
-        optionLabel="name" styleClass="neh-dropdown"></p-dropdown>
+<div class="anime-page">
+  <div class="anime-shell">
+    <header class="anime-header"><h1>Anime por género</h1></header>
+    <nav class="anime-tabs" aria-label="Explorar anime">
+      <a routerLink="/populares" routerLinkActive="current" ariaCurrentWhenActive="page">Populares</a>
+      <a routerLink="/temporada" routerLinkActive="current" ariaCurrentWhenActive="page">Temporadas</a>
+      <a routerLink="/generos" routerLinkActive="current" ariaCurrentWhenActive="page">Géneros</a>
+    </nav>
+    <div class="anime-controls">
+      <label for="anime-genre">Género</label>
+      <select id="anime-genre" [ngModel]="selectedGenero" (ngModelChange)="selectGenre($event)">
+        <option *ngFor="let genre of generos" [ngValue]="genre">{{ genre.name }}</option>
+      </select>
     </div>
-  </div>
-
-  <!-- Subtítulo dinámico -->
-  <div class="neh-section-header" *ngIf="generosAnime.length > 0" style="margin-top: 2rem;">
-    <div class="neh-section-accent"></div>
-    <h2 class="neh-section-title">{{ selectedGenero.name }}</h2>
-    <span class="neh-badge">{{ generosAnime.length }} resultados</span>
-  </div>
-
-  <!-- Grid -->
-  <div class="anime-grid">
-    <div class="anime-grid-item" *ngFor="let genero of generosAnime">
-      <app-tarjetas
-        [data]="{
-          imagen: genero.images['jpg'].image_url,
-          titulo: genero.title,
-          episodios: genero.episodes,
-          puntuacion: genero.score,
-          url: genero.url
-        }">
-      </app-tarjetas>
+    <p *ngIf="isLoading" role="status" class="anime-status">Cargando anime…</p>
+    <div *ngIf="isError" role="alert" class="anime-status">
+      <span>No se pudo cargar el listado.</span>
+      <button type="button" (click)="load()">Reintentar</button>
     </div>
+    <ng-container *ngIf="!isLoading && !isError">
+      <p *ngIf="!generosAnime.length" class="anime-status">No hay resultados.</p>
+      <div class="anime-grid">
+        <app-tarjetas *ngFor="let anime of generosAnime" [data]="{
+          imagen: anime.images['jpg'].image_url,
+          titulo: anime.title,
+          episodios: anime.episodes,
+          puntuacion: anime.score,
+          url: anime.url
+        }"></app-tarjetas>
+      </div>
+    </ng-container>
+    <nav *ngIf="!isLoading && !isError && pageCount > 1" class="pagination" aria-label="Paginación por género">
+      <button type="button" [disabled]="paginaActual <= 1" (click)="selectPage(paginaActual - 1)">Anterior</button>
+      <span aria-current="page">Página {{ paginaActual }} de {{ pageCount }}</span>
+      <button type="button" [disabled]="paginaActual >= pageCount" (click)="selectPage(paginaActual + 1)">Siguiente</button>
+    </nav>
   </div>
-
-  <!-- Paginación -->
-  <nav class="pagination" *ngIf="PagGenero > 1" aria-label="Paginación de géneros">
-    <button pButton pRipple
-      *ngIf="(paginaActual - 2) > 0"
-      (click)="especificarPagina(paginaActual - 2)"
-      [label]="(paginaActual - 2).toString()"
-      class="page-btn">
-    </button>
-    <button pButton pRipple
-      *ngIf="(paginaActual - 1) > 0"
-      (click)="especificarPagina(paginaActual - 1)"
-      [label]="(paginaActual - 1).toString()"
-      class="page-btn">
-    </button>
-    <button pButton pRipple
-      (click)="especificarPagina(paginaActual)"
-      [label]="paginaActual.toString()"
-      class="page-btn active">
-    </button>
-    <button pButton pRipple
-      *ngIf="(paginaActual + 1) < PagGenero"
-      (click)="especificarPagina(paginaActual + 1)"
-      [label]="(paginaActual + 1).toString()"
-      class="page-btn">
-    </button>
-    <button pButton pRipple
-      *ngIf="(paginaActual + 2) < PagGenero"
-      (click)="especificarPagina(paginaActual + 2)"
-      [label]="(paginaActual + 2).toString()"
-      class="page-btn">
-    </button>
-  </nav>
 </div>

@@ -12,11 +12,11 @@
     top: 0;
     z-index: 999;
     /* Ensure it's above the browser content */
-    background: var(--neh-glass-strong) !important;
+    background: #0c111c !important;
     border: none !important;
-    border-bottom: 1px solid var(--neh-glass-border) !important;
+    border-bottom: 1px solid #263449 !important;
     border-radius: 0 !important;
-    padding: 0.35rem 1.5rem !important;
+    padding: 0.35rem clamp(1rem, 3.5vw, 3.5rem) !important;
     backdrop-filter: blur(20px) !important;
     font-family: var(--neh-font-body) !important;
 }
@@ -62,6 +62,7 @@
 
 /* Logo */
 .navbar-logo {
+    display: block;
     width: 5.5rem;
     filter: drop-shadow(0 2px 8px rgba(79, 138, 255, 0.15));
     transition: transform 0.3s ease;
@@ -97,4 +98,15 @@
 
 :host ::ng-deep .p-menubar .p-menubar-button:hover {
     background: rgba(255, 255, 255, 0.06) !important;
+}
+
+:host ::ng-deep .p-menubar .p-menuitem-link-active {
+  background: #1b2a43 !important;
+  color: #c6dcff !important;
+}
+
+:host ::ng-deep .p-menubar a:focus-visible,
+:host ::ng-deep .p-menubar button:focus-visible {
+  outline: 2px solid #a9cbff;
+  outline-offset: 2px;
 }

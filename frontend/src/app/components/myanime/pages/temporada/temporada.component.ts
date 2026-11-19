@@ -1,87 +1,43 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { MyanimeService } from '../../../../services/myanime.service';
-import { FormControl } from '@angular/forms';
-import { Datum } from 'src/app/interfaces/anime.interface';
-import { Message } from 'primeng/api/message';
+import { AnimeCard, MyanimeService } from '../../../../services/myanime.service';
 
 @Component({
   selector: 'app-temporada',
   templateUrl: './temporada.component.html',
-  styleUrls: ['./temporada.component.css']
+  styleUrls: ['../anime-page.css']
 })
 export class TemporadaComponent implements OnInit, OnDestroy {
-
-  Temporadas: Datum[] = [];
-  anioActual: number = new Date().getFullYear();
-  temporada!: string;
-  tempActual: string;
-  anios: number[] = [];
-  anioSeleccionado: number;
-
-  isLoading = false;
+  Temporadas: AnimeCard[] = [];
+  anioSeleccionado = new Date().getFullYear();
+  anios = Array.from({ length: this.anioSeleccionado - 1917 + 1 }, (_, index) => this.anioSeleccionado - index);
+  selectedSeason = 'winter';
+  seasons = [
+    { id: 'winter', label: 'Invierno' }, { id: 'spring', label: 'Primavera' },
+    { id: 'summer', label: 'Verano' }, { id: 'fall', label: 'Otoño' }
+  ];
+  isLoading = true;
   isError = false;
-  messages: Message[] = [];
+  private request?: Subscription;
 
-  selected: FormControl = new FormControl(null);
-  opc: any;
+  constructor(private animeService: MyanimeService) {}
 
-  subscription: Subscription = new Subscription();
+  ngOnInit(): void { this.load(); }
+  ngOnDestroy(): void { this.request?.unsubscribe(); }
 
-  constructor(private MyanimeService: MyanimeService) {
-    this.anioSeleccionado = this.anioActual;
-    this.tempActual = 'winter';
-
-    // Rellenamos el p-dropdown con los anios
-    const ANIO_INICIAL = 1917;
-    for (let i = this.anioActual; i >= ANIO_INICIAL; i--) {
-      this.anios.push(i);
-    }
-
-    // Obtenemos los animes
-    this.obtenerAnimes();
+  selectSeason(season: string): void {
+    if (this.selectedSeason === season) return;
+    this.selectedSeason = season;
+    this.load();
   }
 
-  ngOnInit(): void {
-    this.subscription = this.selected.valueChanges.subscribe(changes => {
-      this.obtenerAnimes();
+  load(): void {
+    this.request?.unsubscribe();
+    this.isLoading = true;
+    this.isError = false;
+    this.request = this.animeService.obtenerSeason(this.selectedSeason, this.anioSeleccionado).subscribe({
+      next: data => { this.Temporadas = data; this.isLoading = false; },
+      error: () => { this.isError = true; this.isLoading = false; }
     });
   }
-
-  obtenerAnimes() {
-    this.MyanimeService.obtenerSeason(this.tempActual, this.anioSeleccionado).subscribe(
-      (datos) => {
-        this.Temporadas = datos
-        this.isLoading = false;
-      },
-      (error) => {
-        this.messages.push({ severity: 'error', summary: 'Error', detail: error });
-        this.isError = true;
-        this.isLoading = false;
-      }
-    );
-  }
-
-  recibirTemp(temp: string) {
-
-    this.tempActual = temp;
-
-    this.obtenerAnimes();
-
-    const tempMap: {
-      [key: string]: string;
-    } = {
-      winter: 'Invierno',
-      spring: 'Primavera',
-      summer: 'Verano',
-      fall: 'Otoño'
-    };
-
-    this.temporada = tempMap[temp];
-  }
-
-  ngOnDestroy(): void {
-    this.subscription.unsubscribe();
-  }
-
 }

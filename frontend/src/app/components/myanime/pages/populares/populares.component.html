@@ -1,22 +1,27 @@
-<div class="neh-page anime-page">
-  <!-- Header -->
-  <header class="page-header">
-    <h1 class="neh-page-title">50 Animes más Populares</h1>
-    <p class="neh-page-subtitle">Ranking de los animes más populares según MyAnimeList</p>
-  </header>
-
-  <!-- Grid de tarjetas -->
-  <div class="anime-grid">
-    <div class="anime-grid-item" *ngFor="let popular of populares; trackBy: trackByTitle">
-      <app-tarjetas
-        [data]="{
-          imagen: popular.images['jpg'].image_url,
-          titulo: popular.title,
-          episodios: popular.episodes,
-          puntuacion: popular.score,
-          url: popular.url
-        }">
-      </app-tarjetas>
+<div class="anime-page">
+  <div class="anime-shell">
+    <header class="anime-header"><h1>Anime popular</h1></header>
+    <nav class="anime-tabs" aria-label="Explorar anime">
+      <a routerLink="/populares" routerLinkActive="current" ariaCurrentWhenActive="page">Populares</a>
+      <a routerLink="/temporada" routerLinkActive="current" ariaCurrentWhenActive="page">Temporadas</a>
+      <a routerLink="/generos" routerLinkActive="current" ariaCurrentWhenActive="page">Géneros</a>
+    </nav>
+    <p *ngIf="isLoading" role="status" class="anime-status">Cargando anime…</p>
+    <div *ngIf="isError" role="alert" class="anime-status">
+      <span>No se pudo cargar el listado.</span>
+      <button type="button" (click)="load()">Reintentar</button>
     </div>
+    <ng-container *ngIf="!isLoading && !isError">
+      <p *ngIf="!populares.length" class="anime-status">No hay resultados.</p>
+      <div class="anime-grid">
+        <app-tarjetas *ngFor="let anime of populares" [data]="{
+          imagen: anime.images['jpg'].image_url,
+          titulo: anime.title,
+          episodios: anime.episodes,
+          puntuacion: anime.score,
+          url: anime.url
+        }"></app-tarjetas>
+      </div>
+    </ng-container>
   </div>
 </div>

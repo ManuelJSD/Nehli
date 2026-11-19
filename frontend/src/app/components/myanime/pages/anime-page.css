@@ -1,0 +1,136 @@
+:host {
+  display: block;
+}
+
+.anime-page {
+  --anime-line: #29364a;
+  --anime-panel: #101622;
+  --anime-muted: #a8b7ce;
+  --anime-accent: #c6dcff;
+  min-height: 78vh;
+  background: radial-gradient(ellipse at 20% 0, #14223a, transparent 58%), var(--neh-bg-deep);
+  color: #edf3ff;
+}
+
+.anime-shell {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2.8rem) clamp(1rem, 3.5vw, 3.5rem) 3.5rem;
+}
+
+.anime-header h1 {
+  margin: 0;
+  font: 700 clamp(2rem, 4vw, 3.3rem)/1.08 var(--neh-font-display);
+  letter-spacing: -0.035em;
+}
+
+.anime-tabs,
+.anime-controls,
+.season-buttons,
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.anime-tabs {
+  margin: 1.2rem 0;
+}
+
+.anime-tabs a,
+.anime-page button,
+.anime-controls select {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid #3b4a65;
+  border-radius: 8px;
+  background: #172337;
+  color: #edf3ff;
+  font: 500 0.9rem var(--neh-font-body);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.anime-tabs a.current,
+.anime-controls button[aria-pressed="true"] {
+  border-color: var(--anime-accent);
+  background: var(--anime-accent);
+  color: #0d1b32;
+}
+
+.anime-tabs a:not(.current):hover,
+.anime-page button:not(:disabled):not([aria-pressed="true"]):hover {
+  background: #243652;
+}
+
+.anime-tabs a:focus-visible,
+.anime-page button:focus-visible,
+.anime-controls select:focus-visible {
+  outline: 2px solid #a9cbff;
+  outline-offset: 3px;
+}
+
+.anime-controls {
+  padding: 0.75rem;
+  margin-bottom: 1.2rem;
+  border: 1px solid var(--anime-line);
+  border-radius: 10px;
+  background: var(--anime-panel);
+}
+
+.anime-controls label,
+.pagination,
+.anime-status {
+  color: var(--anime-muted);
+  font-size: 0.9rem;
+}
+
+.anime-controls select {
+  max-width: 100%;
+  min-width: 6rem;
+}
+
+.season-buttons {
+  margin-inline-start: auto;
+}
+
+.anime-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+  gap: clamp(0.65rem, 1.5vw, 1.2rem);
+}
+
+.anime-status {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  padding: 2rem 1rem;
+  border: 1px dashed var(--anime-line);
+  border-radius: 10px;
+}
+
+.pagination {
+  justify-content: center;
+  margin-top: 1.4rem;
+}
+
+.pagination button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+@media (max-width: 600px) {
+  .season-buttons {
+    flex-basis: 100%;
+    margin-inline-start: 0;
+  }
+
+  .anime-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,31 +1,11 @@
-<article class="anime-card">
-  <!-- Imagen -->
-  <div class="card-media">
-    <img [src]="data.imagen" [alt]="data.titulo" class="card-image" loading="lazy">
-    <div class="card-overlay"></div>
-  </div>
-
-  <!-- Info -->
-  <div class="card-body">
-    <h3 class="card-title">{{ data.titulo }}</h3>
-
-    <div class="card-meta">
-      <div class="meta-item">
-        <i class="pi pi-video"></i>
-        <span>{{ data.episodios ?? '?' }} eps</span>
-      </div>
-      <div class="meta-item meta-score" *ngIf="data.puntuacion">
-        <i class="pi pi-star-fill"></i>
-        <span>{{ data.puntuacion }}</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Footer -->
-  <div class="card-footer">
-    <a [href]="data.url" target="_blank" rel="noopener noreferrer" class="card-link">
-      <i class="pi pi-external-link"></i>
-      <span>Ver más</span>
-    </a>
-  </div>
-</article>
+<a class="anime-card" [href]="data.url" target="_blank" rel="noopener noreferrer"
+   [attr.aria-label]="data.titulo + ' · Abrir ficha, nueva pestaña'">
+  <img [src]="data.imagen" alt="" class="card-image" loading="lazy" decoding="async" (error)="useFallbackImage($event)">
+  <span class="card-body">
+    <strong class="card-title" [attr.title]="data.titulo">{{ data.titulo }}<i class="pi pi-external-link" aria-hidden="true"></i></strong>
+    <span class="card-meta">
+      <span *ngIf="data.episodios as episodes">{{ episodes }} {{ episodes === 1 ? 'episodio' : 'episodios' }}</span>
+      <span *ngIf="data.puntuacion"><i class="pi pi-star-fill" aria-hidden="true"></i> {{ data.puntuacion | number:'1.0-2' }}</span>
+    </span>
+  </span>
+</a>
