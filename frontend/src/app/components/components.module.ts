@@ -13,6 +13,7 @@ import { MyanimeModule } from './myanime/myanime.module';
 import { PrimeNgModule } from '../prime-ng/prime-ng.module';
 import { SharedModule } from 'primeng/api';
 import { NavbarComponent } from './navbar/navbar.component';
+import { AdminComponent } from './admin/admin.component';
 
 @NgModule({
   declarations: [
@@ -23,6 +24,7 @@ import { NavbarComponent } from './navbar/navbar.component';
     VideoComponent,
     FooterComponent,
     NavbarComponent,
+    AdminComponent,
   ],
   imports: [
     CommonModule,
@@ -40,6 +42,7 @@ import { NavbarComponent } from './navbar/navbar.component';
     VideoComponent,
     FooterComponent,
     NavbarComponent,
+    AdminComponent,
   ]
 })
 export class ComponentsModule { }

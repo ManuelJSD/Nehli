@@ -6,7 +6,7 @@ const validateResults = (req, res, next) => {
     return next(); //TODO Continua hacia el controlador!
   } catch (err) {
     res.status(403);
-    res.send({ errors: err.array() });
+    res.send({ errors: err.array().map(({ msg, path, param, location }) => ({ msg, path: path || param, location })) });
   }
 };
 

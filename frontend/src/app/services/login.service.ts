@@ -31,8 +31,13 @@ export class LoginService {
       );
   }
 
-  register(username: string, password: string, email: string) {
-    return this.http.post<any>(this.registroUrl, { username, email, password })
+  getRegistrationChallenge() {
+    return this.http.get<{ id: string; image: string }>(this.registroUrl + '/challenge');
+  }
+
+  register(username: string, password: string, email: string, passwordConfirmation: string,
+           challengeId: string, challengeAnswer: string) {
+    return this.http.post<any>(this.registroUrl, { username, email, password, passwordConfirmation, challengeId, challengeAnswer })
       .pipe(
         tap(() => {
           this.router.navigate(['/welcome']);
@@ -45,43 +50,51 @@ export class LoginService {
       );
   }
 
+  getProfile() {
+    return this.http.get<{ username: string; email: string }>(this.apiUrl + '/api/auth/profile');
+  }
+
+  updateProfile(profile: { username: string; email: string; currentPassword: string;
+                           newPassword?: string; passwordConfirmation?: string }) {
+    return this.http.put<{ username: string; email: string; token: string }>(this.apiUrl + '/api/auth/profile', profile)
+      .pipe(tap(response => localStorage.setItem('token', response.token)));
+  }
+
+  get username(): string {
+    return this.sessionPayload()?.username || '';
+  }
+
   getToken(): string | null {
     return localStorage.getItem('token');
   }
 
-  isLoggedIn(): boolean {
+  get accountId(): number | undefined {
+    return this.sessionPayload()?.id;
+  }
 
-    const token = this.getToken();
-
-    if (!token || token === "undefined") {
-      return false;
-    }
-
+  private sessionPayload(): { id?: number; exp: number; username?: string; role?: string } | undefined {
     try {
-      // Decodificar payload del JWT (parte 1 del array al dividir por el punto)
-      const payload = JSON.parse(atob(token.split('.')[1]));
-
-      // Comprobar si la fecha de expiración es mayor que la fecha actual (payload.exp está en segundos, Date.now() en ms)
-      const isExpired = Date.now() >= payload.exp * 1000;
-
-      if (isExpired) {
-        this.logout(); // Limpiar el token si ya ha caducado
-        return false;
-      }
-      return true;
-    } catch (e) {
-      console.error('Error al decodificar token JWT', e);
-      return false;
+      const payload = this.getToken()?.split('.')[1];
+      if (!payload) return;
+      const bytes = Uint8Array.from(atob(payload.replace(/-/g, '+').replace(/_/g, '/')), value => value.charCodeAt(0));
+      return JSON.parse(new TextDecoder().decode(bytes));
+    } catch {
+      return undefined;
     }
   }
 
-  isAdmin(): boolean {
-    try {
-      const payload = this.getToken()?.split('.')[1];
-      return !!payload && JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))).role === 'admin';
-    } catch {
+  isLoggedIn(): boolean {
+    const payload = this.sessionPayload();
+    if (!payload) return false;
+    if (Date.now() >= payload.exp * 1000) {
+      this.logout();
       return false;
     }
+    return true;
+  }
+
+  isAdmin(): boolean {
+    return this.sessionPayload()?.role === 'admin';
   }
 
   logout(): void {

@@ -151,6 +151,7 @@
 }
 
 .catalog-actions {
+  align-items: center;
   flex-wrap: wrap;
   gap: 0.65rem;
   margin-top: 1.15rem;
@@ -313,10 +314,6 @@
   font-size: clamp(1.5rem, 3vw, 2.55rem);
 }
 
-.dialog-copy .play-link {
-  margin-top: 1.2rem;
-}
-
 .dialog-close {
   display: grid;
   place-items: center;
@@ -449,7 +446,9 @@ button:focus-visible,
 
 .catalog-editor input, .catalog-editor textarea {
   width: 100%;
+  min-width: 0;
   padding: .55rem;
+  font: inherit;
   color: inherit;
   background: #101827;
   border: 1px solid #475569;
@@ -462,4 +461,54 @@ button:focus-visible,
   gap: .25rem;
   margin: 0;
   padding: 0;
+}
+
+.catalog-editor .catalog-actions {
+  margin-top: .35rem;
+}
+
+.catalog-editor-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: .3rem .5rem;
+}
+
+.catalog-editor-search label { grid-column: 1 / -1; }
+
+.catalog-editor-search input {
+  min-height: 2.55rem;
+  min-width: 0;
+}
+
+.catalog-editor-match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+
+.catalog-editor input[type="file"]::file-selector-button {
+  margin-inline-end: .55rem;
+  padding: .35rem .55rem;
+  border: 1px solid #405270;
+  border-radius: .35rem;
+  background: #243652;
+  color: #edf3ff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.catalog-editor input[type="file"]:not(:disabled)::file-selector-button:hover {
+  background: #31476a;
+}
+
+.catalog-editor :disabled {
+  opacity: .65;
+  cursor: default;
+}
+
+@media (max-width: 520px) {
+  .catalog-editor-search { grid-template-columns: minmax(0, 1fr); }
+  .catalog-editor-search button { justify-self: start; }
 }

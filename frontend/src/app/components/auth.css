@@ -165,3 +165,11 @@
     display: none;
   }
 }
+
+.challenge-refresh {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}

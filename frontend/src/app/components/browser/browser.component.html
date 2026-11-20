@@ -90,15 +90,19 @@
       <span class="featured-category">{{ entry.category }}<ng-container *ngIf="selectedInfo?.year"> · {{ selectedInfo?.year }}</ng-container></span>
       <h2 id="title-dialog-heading">{{ selectedInfo?.title || entry.title }}</h2>
       <ng-container *ngIf="!editing; else editor">
-      <p *ngIf="loadingDetails" role="status">Cargando información…</p>
-      <p *ngIf="!loadingDetails">{{ selectedInfo?.synopsis || 'Sin sinopsis disponible.' }}</p>
-      <a *ngIf="selectedInfo?.sourceUrl as source"
-         class="metadata-source" [href]="source" target="_blank" rel="noopener noreferrer">Wikipedia · CC BY-SA</a>
-      <p *ngIf="selectedInfo?.genres?.length" class="genre-list">{{ selectedInfo?.genres?.join(' · ') }}</p>
-      <a class="play-link" [routerLink]="entry.playUrl" (click)="closeTitle()">
-        <i class="pi pi-play" aria-hidden="true"></i> Reproducir
-      </a>
-      <button *ngIf="canEdit" class="quiet-button" type="button" (click)="startEdit()">Editar ficha</button>
+        <p *ngIf="loadingDetails" role="status">Cargando información…</p>
+        <p *ngIf="!loadingDetails">{{ selectedInfo?.synopsis || 'Sin sinopsis disponible.' }}</p>
+        <a *ngIf="selectedInfo?.sourceUrl as source"
+           class="metadata-source" [href]="source" target="_blank" rel="noopener noreferrer">Wikipedia · CC BY-SA</a>
+        <p *ngIf="selectedInfo?.genres?.length" class="genre-list">{{ selectedInfo?.genres?.join(' · ') }}</p>
+        <div class="catalog-actions">
+          <a class="play-link" [routerLink]="entry.playUrl" (click)="closeTitle()">
+            <i class="pi pi-play" aria-hidden="true"></i> Reproducir
+          </a>
+          <button *ngIf="canEdit" class="quiet-button" type="button" (click)="startEdit()">
+            <i class="pi pi-pencil" aria-hidden="true"></i> Editar ficha
+          </button>
+        </div>
       </ng-container>
       <ng-template #editor>
         <form class="catalog-editor" (ngSubmit)="saveEdit()">
@@ -115,14 +119,18 @@
             <button *ngIf="hasEditImage" type="button" class="quiet-button"
                     (click)="editImage = null; hasEditImage = false; coverInput.value = ''">Quitar portada personalizada</button>
             <ng-container *ngIf="isAnime">
-              <label>Coincidencia de AniList
-                <input name="animeQuery" [(ngModel)]="animeQuery" maxlength="160">
-              </label>
-              <button type="button" class="quiet-button" [disabled]="searchingAnime" (click)="searchAnime()">Buscar en AniList</button>
-              <p *ngIf="animeMatch as match">
-                {{ match.title }} <span *ngIf="match.year">({{ match.year }})</span>
+              <div class="catalog-editor-search">
+                <label for="editor-anime-query">Coincidencia de AniList</label>
+                <input id="editor-anime-query" name="animeQuery" [(ngModel)]="animeQuery" maxlength="160">
+                <button type="button" class="quiet-button" [disabled]="searchingAnime || !animeQuery.trim()" (click)="searchAnime()">
+                  <i class="pi" [ngClass]="searchingAnime ? 'pi-spin pi-spinner' : 'pi-search'" aria-hidden="true"></i>
+                  Buscar en AniList
+                </button>
+              </div>
+              <div class="catalog-editor-match" *ngIf="animeMatch as match">
+                <span>{{ match.title }} <ng-container *ngIf="match.year">({{ match.year }})</ng-container></span>
                 <button type="button" class="quiet-button" (click)="animeMatch = undefined">Usar búsqueda automática</button>
-              </p>
+              </div>
               <ul *ngIf="animeResults.length">
                 <li *ngFor="let result of animeResults">
                   <button type="button" class="quiet-button" (click)="animeMatch = result; animeResults = []">

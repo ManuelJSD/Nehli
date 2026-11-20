@@ -19,6 +19,12 @@ const validatorRegister = [
         .isLength({ min: 4, max: 24 })
         .withMessage('La contraseña debe tener entre 4 y 24 caracteres.'),
 
+    check('passwordConfirmation')
+        .isString().withMessage('Confirma la contraseña.')
+        .bail()
+        .custom((value, { req }) => value === req.body.password)
+        .withMessage('Las contraseñas deben coincidir.'),
+
     check('email')
         .exists()
         .notEmpty()
@@ -74,4 +80,17 @@ const validatorCambiarPass = [
     }
 ];
 
-module.exports = { validatorRegister, validatorLogin, validatorCambiarPass };
+const validatorProfile = [
+    check('username').isString().bail().trim().isLength({ min: 4, max: 24 })
+        .withMessage('El nombre de usuario debe tener entre 4 y 24 caracteres.'),
+    check('email').isString().bail().trim().isEmail().withMessage('Debe ser un email válido.'),
+    check('currentPassword').isString().bail().isLength({ min: 4, max: 24 })
+        .withMessage('Introduce tu contraseña actual.'),
+    check('newPassword').optional().isString().bail().isLength({ min: 4, max: 24 })
+        .withMessage('La nueva contraseña debe tener entre 4 y 24 caracteres.'),
+    check('passwordConfirmation').custom((value, { req }) => value === req.body.newPassword)
+        .withMessage('Las contraseñas nuevas deben coincidir.'),
+    validationResult
+];
+
+module.exports = { validatorRegister, validatorLogin, validatorCambiarPass, validatorProfile };

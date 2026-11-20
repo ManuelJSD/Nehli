@@ -1,10 +1,11 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const { loginCtrl, registerCtrl, listarCuentas, cambiarPassCtrl } = require('../controllers/auth');
+const { loginCtrl, registerCtrl, listarCuentas, cambiarPassCtrl, getProfileCtrl, updateProfileCtrl, updateAccountRoleCtrl } = require('../controllers/auth');
 const router = express.Router();
-const { validatorRegister, validatorLogin, validatorCambiarPass } = require('../validators/auth');
+const { validatorRegister, validatorLogin, validatorCambiarPass, validatorProfile } = require('../validators/auth');
 const authMiddleware = require('../middleware/session');
 const checkRol = require('../middleware/rol');
+const { challenge, verifyChallenge } = require('../utils/registrationChallenge');
 
 // ─── Rate Limiter específico para autenticación ──────────────────────────────
 // Máximo 10 intentos de login/register por IP en 15 minutos.
@@ -38,7 +39,14 @@ const authLimiter = rateLimit({
  *       '429':
  *         description: Demasiados intentos
  */
-router.post('/register', authLimiter, validatorRegister, registerCtrl);
+router.get('/register/challenge', rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiadas solicitudes de códigos. Inténtalo más tarde.' }
+}), challenge);
+router.post('/register', authLimiter, validatorRegister, verifyChallenge, registerCtrl);
 
 /**
  * @openapi
@@ -111,5 +119,9 @@ router.post('/cambiarpass', authMiddleware, validatorCambiarPass, cambiarPassCtr
  *         description: Sin permisos de administrador
  */
 router.get('/listar', authMiddleware, checkRol(['admin']), listarCuentas);
+router.patch('/accounts/:id/role', authMiddleware, checkRol(['admin']), updateAccountRoleCtrl);
+
+router.get('/profile', authMiddleware, getProfileCtrl);
+router.put('/profile', authLimiter, authMiddleware, validatorProfile, updateProfileCtrl);
 
 module.exports = router;

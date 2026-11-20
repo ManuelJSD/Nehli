@@ -2,6 +2,7 @@ const { matchedData } = require('express-validator');
 const { tokenSign } = require('../utils/handleJwt');
 const { handleHttpError } = require('../utils/handleError');
 const { cuentasModel } = require('../models');
+const { sequelize } = require('../config/mysql');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 
@@ -34,7 +35,7 @@ const registerCtrl = async (req, res) => {
 
         // Hashear la contraseña antes de guardar
         const hashedPassword = await bcrypt.hash(req.password, 10);
-        const body = { ...req, password: hashedPassword };
+        const body = { username: req.username, email: req.email, password: hashedPassword };
         const dataUser = await cuentasModel.create(body);
 
         const data = {
@@ -162,8 +163,9 @@ const listarCuentas = async (req, res) => {
     try {
         const data = await cuentasModel.findAll({
             attributes: ['id', 'username', 'role', 'createdAt'],
+            order: [['createdAt', 'DESC'], ['id', 'DESC']]
         });
-        res.status(200).json({ data });
+        res.set('Cache-Control', 'no-store').status(200).json({ data });
 
     } catch (error) {
         console.error('Error al listar las cuentas:', error);
@@ -171,4 +173,66 @@ const listarCuentas = async (req, res) => {
     }
 };
 
-module.exports = { registerCtrl, loginCtrl, listarCuentas, cambiarPassCtrl };
+const getProfileCtrl = (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const { username, email } = req.user;
+    res.set('Cache-Control', 'no-store').json({ username, email });
+};
+
+const updateProfileCtrl = async (req, res, next) => {
+    if (!req.user) return res.sendStatus(401);
+    const { username, email, currentPassword, newPassword } = matchedData(req);
+    const { id, password, role } = req.user;
+    try {
+        if (!await bcrypt.compare(currentPassword, password)) {
+            return handleHttpError(res, 'La contraseña actual es incorrecta.', 401);
+        }
+
+        const changes = { username, email };
+        if (newPassword) changes.password = await bcrypt.hash(newPassword, 10);
+        const token = await tokenSign({ id, username, role });
+        if (newPassword || username !== req.user.username || email !== req.user.email) {
+            const [updated] = await cuentasModel.update(changes, { where: { id, password } });
+            if (!updated) return handleHttpError(res, 'La cuenta cambió. Vuelve a abrir el formulario.', 409);
+        }
+        res.set('Cache-Control', 'no-store').json({ username, email, token });
+    } catch (error) {
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return handleHttpError(res, 'El nombre de usuario o el correo ya están en uso.', 409);
+        }
+        next(error);
+    }
+};
+
+const updateAccountRoleCtrl = async (req, res, next) => {
+    const id = Number(req.params.id);
+    const { role } = req.body || {};
+    if (!/^\d+$/.test(req.params.id) || !Number.isSafeInteger(id) || id <= 0 || !['user', 'admin'].includes(role)) {
+        return handleHttpError(res, 'Cuenta o rol no válido.', 400);
+    }
+    if (id === req.user.id) return handleHttpError(res, 'No puedes cambiar tu propio rol.', 409);
+
+    try {
+        const result = await sequelize.transaction(async transaction => {
+            // Serializa los cambios de rol y vuelve a verificar al administrador que los solicita.
+            const admins = await cuentasModel.findAll({
+                where: { role: 'admin' }, attributes: ['id'],
+                order: [['id', 'ASC']], transaction, lock: transaction.LOCK.UPDATE
+            });
+            if (!admins.some(admin => admin.id === req.user.id)) return 403;
+            const target = await cuentasModel.findByPk(id, {
+                attributes: ['id', 'role'], transaction, lock: transaction.LOCK.UPDATE
+            });
+            if (!target) return 404;
+            await target.update({ role }, { fields: ['role'], transaction });
+            return 204;
+        });
+        if (result === 403) return handleHttpError(res, 'No tienes permisos.', 403);
+        if (result === 404) return handleHttpError(res, 'La cuenta no existe.', 404);
+        res.sendStatus(204);
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { registerCtrl, loginCtrl, listarCuentas, cambiarPassCtrl, getProfileCtrl, updateProfileCtrl, updateAccountRoleCtrl };

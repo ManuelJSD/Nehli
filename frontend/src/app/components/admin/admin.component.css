@@ -1,0 +1,99 @@
+:host { display: block; }
+.admin-page {
+  width: min(100% - 2rem, 68rem);
+  margin-inline: auto;
+  padding-block: clamp(1.5rem, 5vw, 3.5rem);
+  color: #eff5ff;
+}
+
+.admin-header { margin-bottom: 1.35rem; }
+h1, h2, p { margin: 0; }
+h1 { font-size: clamp(1.95rem, 5vw, 3.1rem); letter-spacing: -.04em; }
+h2 { font-size: 1.2rem; }
+.admin-header p, .catalog-panel p { color: #aabbd4; margin-top: .35rem; }
+.overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin-bottom: 1rem; }
+.overview div, .account-panel, .catalog-panel {
+  border: 1px solid #2b3b53;
+  background: #121c2d;
+  border-radius: .8rem;
+}
+.overview div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: .25rem .7rem;
+  padding: clamp(.75rem, 2vw, 1.2rem);
+}
+.overview i { grid-row: span 2; color: #9fc6ff; font-size: 1.25rem; }
+.overview strong { font-size: 1.5rem; line-height: 1; }
+.overview span { color: #b7c6dc; font-size: .85rem; }
+
+.panel-header, .catalog-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem;
+  padding: 1rem clamp(.8rem, 2.6vw, 1.4rem);
+}
+.account-filters, .dialog-actions { display: flex; flex-wrap: wrap; gap: .55rem; }
+.account-filters input, .account-filters select, .action {
+  border: 1px solid #405474;
+  border-radius: .5rem;
+  min-height: 2.5rem;
+  padding: .45rem .7rem;
+  font: inherit;
+  color: #f0f5ff;
+  background: #19263b;
+}
+.account-filters input { min-width: 0; }
+.action {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: .45rem;
+  color: #e7efff;
+  font-weight: 600;
+  font-size: .85rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.action:hover { background: #243857; }
+.action.primary { background: #c1daff; color: #10213a; border-color: #c1daff; }
+.action.primary:hover { background: #deebff; }
+.action:disabled { opacity: .6; cursor: default; }
+.action:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #a9cbff; outline-offset: 2px; }
+.panel-message { padding: .7rem 1.1rem 1.1rem; }
+.panel-message button { margin-top: .65rem; }
+.table-shell { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; text-align: left; }
+thead { background: #172338; color: #bdcce2; }
+th, td { padding: .7rem clamp(.8rem, 2.6vw, 1.4rem); border-top: 1px solid #283951; }
+tbody th { overflow-wrap: anywhere; }
+tbody th small { display: block; margin-top: .15rem; color: #aabbd4; font-weight: normal; }
+tbody td:last-child, time { white-space: nowrap; }
+.role { display: inline-flex; border-radius: 1rem; padding: .25rem .58rem; background: #25354c; color: #e0eafa; font-size: .8rem; }
+.role-admin { background: #243e65; color: #c9e1ff; }
+.catalog-panel { margin-top: 1rem; }
+.catalog-panel p { font-size: .9rem; }
+
+.role-dialog {
+  width: min(28rem, calc(100% - 2rem));
+  padding: 1.25rem;
+  color: #eff5ff;
+  background: #121c2d;
+  border: 1px solid #405474;
+  border-radius: .8rem;
+}
+.role-dialog::backdrop { background: #050a12b8; }
+.role-dialog p { margin-block: .7rem 1rem; color: #c8d4e8; }
+.role-dialog .error { color: #ffc3bd; }
+.dialog-actions { justify-content: flex-end; }
+
+@media (max-width: 560px) {
+  .overview { gap: .4rem; }
+  .overview div { grid-template-columns: 1fr; gap: .3rem; }
+  .overview i { grid-row: auto; }
+  .account-filters { width: 100%; }
+  .account-filters input { flex: 1 1 9rem; }
+}

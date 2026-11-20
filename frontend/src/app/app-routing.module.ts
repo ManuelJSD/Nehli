@@ -12,6 +12,8 @@ import { GenerosComponent } from './components/myanime/pages/generos/generos.com
 import { PopularesComponent } from './components/myanime/pages/populares/populares.component';
 import { TemporadaComponent } from './components/myanime/pages/temporada/temporada.component';
 import { VideoComponent } from './components/video/video.component';
+import { AdminComponent } from './components/admin/admin.component';
+import { AdminGuard } from './guards/admin.guard';
 
 const routes: Routes = [
   {
@@ -53,6 +55,11 @@ const routes: Routes = [
     path: 'videos/:category/:subcategory/:video',
     component: VideoComponent,
     canActivate: [AuthGuard]
+  },
+  {
+    path: 'admin',
+    component: AdminComponent,
+    canActivate: [AdminGuard]
   },
   {
     path: '**',

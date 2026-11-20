@@ -3,13 +3,55 @@
     <a routerLink="/browser" aria-label="Nehli · Biblioteca"><img src="assets/images/logo.webp" alt="Nehli" class="navbar-logo"></a>
   </ng-template>
   <ng-template pTemplate="end">
-    <button
-      pButton
-      type="button"
-      label="Salir"
-      icon="pi pi-sign-out"
-      class="btn-logout"
-      (click)="logout()">
-    </button>
+    <details #accountMenu class="account-menu" (keydown.escape)="closeMenuWithKeyboard($event)">
+      <summary [title]="username">
+        <i class="pi pi-user" aria-hidden="true"></i>
+        <span>{{ username }}</span>
+        <i class="pi pi-chevron-down" aria-hidden="true"></i>
+      </summary>
+      <div class="account-menu-options">
+        <a *ngIf="canAdminister" routerLink="/admin" (click)="accountMenu.open = false">
+          <i class="pi pi-shield" aria-hidden="true"></i> Administración
+        </a>
+        <button type="button" (click)="openProfile()"><i class="pi pi-user-edit" aria-hidden="true"></i> Editar cuenta</button>
+        <button type="button" class="account-logout" (click)="logout()"><i class="pi pi-sign-out" aria-hidden="true"></i> Cerrar sesión</button>
+      </div>
+    </details>
   </ng-template>
 </p-menubar>
+
+<dialog #accountDialog class="account-dialog" aria-labelledby="account-title" (close)="resetProfile()"
+        (cancel)="savingProfile ? $event.preventDefault() : undefined">
+  <header>
+    <h2 id="account-title">Editar cuenta</h2>
+    <button type="button" class="account-close" aria-label="Cerrar" [disabled]="savingProfile" (click)="accountDialog.close()">
+      <i class="pi pi-times" aria-hidden="true"></i>
+    </button>
+  </header>
+  <p *ngIf="loadingProfile" role="status">Cargando cuenta…</p>
+  <p *ngIf="errorMessage" class="account-error" role="alert">{{ errorMessage }}</p>
+  <p *ngIf="statusMessage" role="status">{{ statusMessage }}</p>
+  <button *ngIf="!loadingProfile && !profileReady" type="button" class="account-button" (click)="loadProfile()">Reintentar</button>
+  <form *ngIf="profileReady" #accountForm="ngForm" (ngSubmit)="saveProfile()">
+    <fieldset [disabled]="savingProfile">
+      <label for="account-name">Usuario</label>
+      <input id="account-name" name="username" [(ngModel)]="profileName" autocomplete="username" required minlength="4" maxlength="24">
+      <label for="account-email">Correo electrónico</label>
+      <input id="account-email" name="email" type="email" email [(ngModel)]="email" autocomplete="email" required>
+      <label for="account-current">Contraseña actual</label>
+      <input id="account-current" name="currentPassword" type="password" [(ngModel)]="currentPassword"
+             autocomplete="current-password" required minlength="4" maxlength="24">
+      <label for="account-new">Nueva contraseña (opcional)</label>
+      <input id="account-new" name="newPassword" type="password" [(ngModel)]="newPassword"
+             autocomplete="new-password" minlength="4" maxlength="24">
+      <ng-container *ngIf="newPassword || passwordConfirmation">
+        <label for="account-confirm">Confirmar nueva contraseña</label>
+        <input id="account-confirm" name="passwordConfirmation" type="password" [(ngModel)]="passwordConfirmation"
+               autocomplete="new-password" maxlength="24" required>
+      </ng-container>
+      <button type="submit" class="account-button" [disabled]="accountForm.invalid || savingProfile">
+        {{ savingProfile ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+    </fieldset>
+  </form>
+</dialog>
