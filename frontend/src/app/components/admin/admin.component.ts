@@ -35,6 +35,7 @@ export class AdminComponent implements OnInit, OnDestroy, AfterViewInit {
   accessError = '';
   accessAccount?: AdminAccount;
   deniedCategories: string[] = [];
+  musicAllowed = true;
   private accessRequest?: Subscription;
 
   invites: Invite[] = [];
@@ -163,7 +164,9 @@ export class AdminComponent implements OnInit, OnDestroy, AfterViewInit {
   editCategories(account: AdminAccount): void {
     if (!this.accessSettings || this.accessBusy) return;
     this.accessAccount = account;
-    this.deniedCategories = [...(this.accessSettings.accounts[account.id]?.deniedCategories || [])];
+    const permissions = this.accessSettings.accounts[account.id];
+    this.deniedCategories = [...(permissions?.deniedCategories || [])];
+    this.musicAllowed = permissions?.musicAllowed ?? true;
     this.accessError = '';
     this.accessDialog.nativeElement.showModal();
   }
@@ -174,7 +177,7 @@ export class AdminComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   saveCategories(): void {
-    if (this.accessAccount) this.savePolicy(this.accessAccount, { deniedCategories: this.deniedCategories });
+    if (this.accessAccount) this.savePolicy(this.accessAccount, { deniedCategories: this.deniedCategories, musicAllowed: this.musicAllowed });
   }
 
   private savePolicy(account: AdminAccount, changes: Partial<CategoryPolicy>): void {

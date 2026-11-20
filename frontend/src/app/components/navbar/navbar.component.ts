@@ -2,6 +2,7 @@ import { Component, ElementRef, HostListener, OnDestroy, ViewChild } from '@angu
 import { Subscription } from 'rxjs';
 import { Router } from '@angular/router';
 import { MenuItem } from 'primeng/api/menuitem';
+import { MusicService } from 'src/app/services/music.service';
 import { LoginService } from 'src/app/services/login.service';
 
 @Component({
@@ -24,6 +25,7 @@ export class NavbarComponent implements OnDestroy {
   errorMessage = '';
   statusMessage = '';
   private profileRequest?: Subscription;
+  private musicRequest?: Subscription;
 
   get canAdminister(): boolean {
     return this.loginService.isAdmin();
@@ -33,15 +35,17 @@ export class NavbarComponent implements OnDestroy {
     return this.loginService.username || 'Cuenta';
   }
 
-  constructor(private loginService: LoginService, private router: Router) { }
+  constructor(private loginService: LoginService, private router: Router, private music: MusicService) { }
 
-  ngOnInit() {
+  ngOnInit(): void {
+    const musicItem: MenuItem = { label: 'Música', icon: 'pi pi-volume-up', routerLink: '/musica', visible: false };
     this.items = [
       {
         label: 'Biblioteca',
         icon: 'pi pi-fw pi-home',
         routerLink: '/browser'
       },
+      musicItem,
       {
         label: 'Anime',
         icon: 'pi pi-desktop',
@@ -88,6 +92,13 @@ export class NavbarComponent implements OnDestroy {
         ]
       },
     ];
+    this.musicRequest = this.music.access().subscribe({
+      next: ({ allowed }) => {
+        musicItem.visible = allowed;
+        this.items = [...this.items];
+      },
+      error: () => {}
+    });
   }
 
   @HostListener('document:click', ['$event'])
@@ -170,6 +181,7 @@ export class NavbarComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.musicRequest?.unsubscribe();
     this.profileRequest?.unsubscribe();
   }
 

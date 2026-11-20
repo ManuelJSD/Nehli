@@ -1,0 +1,109 @@
+.music-player {
+  position: fixed;
+  z-index: 900;
+  inset: auto 0 0;
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(15rem, 1.5fr) minmax(10rem, 1fr);
+  align-items: center;
+  gap: .4rem clamp(.75rem, 3vw, 3rem);
+  padding: .65rem clamp(.75rem, 4vw, 3rem) calc(.65rem + env(safe-area-inset-bottom));
+  color: #eff5ff;
+  background: linear-gradient(105deg, #1b2d49, #101b2d 52%, #17253c);
+  border-top: 1px solid #405474;
+  box-shadow: 0 -.45rem 1.5rem #070e1c75;
+}
+[hidden] { display: none !important; }
+.playing { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.player-art {
+  position: relative;
+  width: 3.25rem;
+  height: 3.25rem;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: .6rem;
+  color: #bad4ff;
+  background: #314b73;
+}
+.player-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.playing-copy { display: grid; gap: .22rem; min-width: 0; }
+.playing strong, .playing small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.playing small { color: #bdd0eb; }
+.transport { display: grid; gap: .3rem; min-width: 0; }
+.transport-buttons, .player-actions { display: flex; align-items: center; gap: .35rem; }
+.transport-buttons { justify-content: center; }
+.player-actions { justify-content: flex-end; }
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  border-radius: .55rem;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.icon-button:hover:not(:disabled), .icon-button[aria-expanded="true"] { background: #304465; }
+.icon-button:disabled { opacity: .4; cursor: default; }
+.icon-button.play-toggle {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  background: #c1daff;
+  color: #13233c;
+}
+.icon-button.play-toggle:hover { background: #e1edff; }
+.icon-button:focus-visible, input:focus-visible, .queue-panel button:focus-visible { outline: 2px solid #a9cbff; outline-offset: 2px; }
+.timeline { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem; align-items: center; gap: .4rem; }
+.timeline span { color: #bdd0eb; font-size: .75rem; font-variant-numeric: tabular-nums; }
+.timeline span:last-child { text-align: right; }
+input[type="range"] {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: .32rem;
+  border-radius: 1rem;
+  margin: .45rem 0;
+  background: linear-gradient(90deg, #a9cbff var(--fill, 0%), #415470 var(--fill, 0%));
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb { appearance: none; width: .85rem; height: .85rem; border: 0; border-radius: 50%; background: #e4efff; }
+input[type="range"]::-moz-range-thumb { width: .85rem; height: .85rem; border: 0; border-radius: 50%; background: #e4efff; }
+input[type="range"]:disabled { cursor: default; opacity: .65; }
+.volume { max-width: 5rem; }
+.player-error { grid-column: 1 / -1; margin: 0; color: #fecaca; }
+.player-spacer { height: calc(5.5rem + env(safe-area-inset-bottom)); }
+@media (max-width: 760px) {
+  .music-player { grid-template-columns: minmax(0, 1fr) auto; }
+  .transport { grid-column: 1 / -1; grid-row: 2; }
+  .playing { gap: .5rem; }
+  .player-art { width: 2.6rem; height: 2.6rem; }
+  .player-actions .volume { display: none; }
+  .player-spacer { height: calc(8.6rem + env(safe-area-inset-bottom)); }
+}
+
+.queue-panel {
+  position: absolute;
+  bottom: calc(100% + .45rem);
+  inset-inline-end: .75rem;
+  width: min(24rem, calc(100vw - 1.5rem));
+  max-height: min(55vh, 24rem);
+  overflow: auto;
+  padding: .8rem;
+  border: 1px solid #405474;
+  border-radius: .65rem;
+  background: #132035;
+  box-shadow: 0 .5rem 2rem #0008;
+}
+.queue-panel h2 { margin: 0 0 .5rem; font-size: 1rem; }
+.queue-panel p { margin: 0; color: #bdd0eb; }
+.queue-panel ol { margin: 0; padding: 0; list-style: none; }
+.queue-panel li { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .3rem 0; }
+.queue-panel li + li { border-top: 1px solid #2b3b53; }
+.queue-panel li div { display: grid; min-width: 0; overflow-wrap: anywhere; }
+.queue-panel small { color: #bdd0eb; }
+.queue-panel button { width: 2.4rem; height: 2.4rem; flex: 0 0 auto; color: inherit; background: #19263b; border: 1px solid #405474; border-radius: .45rem; cursor: pointer; }
+.queue-panel button:hover { background: #243857; }

@@ -11,6 +11,7 @@ export interface Invite {
 export interface CategoryPolicy {
   pending: boolean;
   deniedCategories: string[];
+  musicAllowed?: boolean;
 }
 
 export interface AccessSettings {

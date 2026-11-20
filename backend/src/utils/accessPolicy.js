@@ -1,4 +1,5 @@
 const Policy = require('../models/accountPolicy');
+const MusicAccess = require('../models/musicAccess');
 
 function deniedCategories(row) {
     const value = row?.deniedCategories;
@@ -24,6 +25,21 @@ function requireCategory(req, res, next) {
     next();
 }
 
+async function canAccessMusic(account) {
+    if (account.role === 'admin') return true;
+    const access = await MusicAccess.findByPk(account.id);
+    return access?.allowed !== false;
+}
+
+async function requireMusic(req, res, next) {
+    try {
+        if (!await canAccessMusic(req.user)) {
+            return res.status(403).json({ error: 'Tu cuenta no tiene acceso a Música.' });
+        }
+        next();
+    } catch (error) { next(error); }
+}
+
 const mediaCookie = 'nehli_media_session';
 const mediaCookieOptions = { httpOnly: true, sameSite: 'lax', path: '/api' };
 function cookieToken(req) {
@@ -36,4 +52,4 @@ function setMediaCookie(req, res) {
     res.cookie(mediaCookie, req.sessionToken, { ...mediaCookieOptions, secure });
 }
 
-module.exports = { Policy, policyFor, deniedCategories, canAccessCategory, requireCategory, mediaCookie, mediaCookieOptions, cookieToken, setMediaCookie };
+module.exports = { Policy, canAccessMusic, requireMusic, policyFor, deniedCategories, canAccessCategory, requireCategory, mediaCookie, mediaCookieOptions, cookieToken, setMediaCookie };

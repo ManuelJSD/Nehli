@@ -1,5 +1,7 @@
 const express = require('express');
 const { cuentasModel } = require('../models');
+const { sequelize } = require('../config/mysql');
+const MusicAccess = require('../models/musicAccess');
 const session = require('../middleware/session');
 const admin = require('../middleware/rol')(['admin']);
 const { getVideos } = require('../controllers/video');
@@ -15,9 +17,15 @@ router.post('/logout', (req, res) => {
 
 router.get('/settings', session, admin, async (req, res, next) => {
     try {
-        const [settings, policies, catalog] = await Promise.all([Policy.findByPk(0), Policy.findAll(), getVideos()]);
+        const [settings, policies, catalog, music] = await Promise.all([
+            Policy.findByPk(0), Policy.findAll(), getVideos(), MusicAccess.findAll()
+        ]);
         const accounts = Object.fromEntries(policies.filter(row => row.accountId !== 0)
             .map(row => [row.accountId, { pending: row.pending, deniedCategories: deniedCategories(row) }]));
+        for (const row of music) {
+            accounts[row.accountId] ??= { pending: false, deniedCategories: [] };
+            accounts[row.accountId].musicAllowed = row.allowed;
+        }
         res.json({ approvalRequired: settings?.approvalRequired ?? false, categories: Object.keys(catalog), accounts });
     } catch (error) { next(error); }
 });
@@ -36,17 +44,29 @@ router.patch('/accounts/:id', session, admin, async (req, res, next) => {
     const input = req.body || {};
     const keys = Object.keys(input);
     const valid = keys.every(key => key === 'pending' && input.pending === false ||
+        key === 'musicAllowed' && typeof input.musicAllowed === 'boolean' ||
         key === 'deniedCategories' && Array.isArray(input.deniedCategories) && input.deniedCategories.length <= 512 &&
         input.deniedCategories.every(category => typeof category === 'string' && category.length > 0 && category.length <= 512));
     if (!Number.isSafeInteger(id) || id <= 0 || !keys.length || !valid) return res.sendStatus(400);
     try {
-        const account = await cuentasModel.findByPk(id);
-        if (!account) return res.sendStatus(404);
-        if (account.role === 'admin') return res.status(409).json({ error: 'Las cuentas administradoras conservan el acceso completo.' });
-        const [policy] = await Policy.findOrCreate({ where: { accountId: id } });
-        if (input.deniedCategories) input.deniedCategories = [...new Set(input.deniedCategories)];
-        await policy.update(input, { fields: keys });
-        res.sendStatus(204);
+        const status = await sequelize.transaction(async transaction => {
+            const account = await cuentasModel.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+            if (!account) return 404;
+            if (account.role === 'admin') return 409;
+            const { musicAllowed, ...policy } = input;
+            const fields = Object.keys(policy);
+            if (fields.length) {
+                if (policy.deniedCategories) policy.deniedCategories = [...new Set(policy.deniedCategories)];
+                const [record] = await Policy.findOrCreate({ where: { accountId: id }, transaction });
+                await record.update(policy, { fields, transaction });
+            }
+            if (musicAllowed !== undefined) {
+                await MusicAccess.upsert({ accountId: id, allowed: musicAllowed }, { transaction });
+            }
+            return 204;
+        });
+        if (status === 409) return res.status(409).json({ error: 'Las cuentas administradoras conservan el acceso completo.' });
+        res.sendStatus(status);
     } catch (error) { next(error); }
 });
 

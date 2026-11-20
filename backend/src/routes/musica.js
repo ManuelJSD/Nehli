@@ -1,40 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middleware/session');
+const session = require('../middleware/session');
+const { canAccessMusic, requireMusic, setMediaCookie } = require('../utils/accessPolicy');
+const { notePlayback } = require('../utils/metadataCache');
 const controller = require('../controllers/musica');
 
-/**
- * @swagger
- * tags:
- *   name: Música
- *   description: API para obtener el listado de archivos de música del servidor multimedia
- */
-
-/**
- * @swagger
- * /musica/musica:
- *   get:
- *     summary: Obtiene el listado de archivos de música
- *     tags: [Música]
- *     security:
- *       - bearerAuth: []
- *     description: >
- *       Devuelve los archivos de audio disponibles en la carpeta configurada.
- *       Requiere autenticación.
- *     responses:
- *       200:
- *         description: Listado de archivos de música
- *       401:
- *         description: No autenticado
- */
-router.get('/musica', authMiddleware, (req, res) => {
-  try {
-    const musica = controller.getMusicas();
-    res.json(musica);
-  } catch (error) {
-    console.error('Error al obtener música:', error);
-    res.status(500).json({ error: 'Error al obtener el catálogo de música.' });
-  }
+router.use((req, res, next) => {
+    res.set('Cache-Control', 'private, no-store');
+    next();
 });
+
+router.get('/access', session, async (req, res, next) => {
+    try { res.json({ allowed: await canAccessMusic(req.user) }); }
+    catch (error) { next(error); }
+});
+router.get('/catalog', session, requireMusic, (req, res) => {
+    setMediaCookie(req, res);
+    controller.getCatalog(req, res);
+});
+router.get('/musica', session, requireMusic, async (req, res, next) => {
+    try { res.json(await controller.getMusicas()); }
+    catch (error) { next(error); }
+});
+router.get('/artwork/:id', session.mediaSession, requireMusic, controller.sendArtwork);
+router.get('/track/:id', session.mediaSession, requireMusic, notePlayback, controller.playTrack);
 
 module.exports = router;

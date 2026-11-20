@@ -61,7 +61,7 @@
                   <button *ngIf="accessSettings.accounts[account.id]?.pending" type="button" class="action primary"
                           [disabled]="accessBusy" (click)="approve(account)">Aprobar cuenta</button>
                   <button type="button" class="action secondary" [disabled]="accessBusy"
-                          (click)="editCategories(account)">Categorías</button>
+                          (click)="editCategories(account)">Permisos</button>
                 </ng-container>
               </td>
             </tr>
@@ -162,7 +162,7 @@
 </dialog>
 
 <dialog #accessDialog class="role-dialog" aria-labelledby="access-categories" (cancel)="accessBusy ? $event.preventDefault() : undefined">
-  <h2 id="access-categories">Categorías de {{ accessAccount?.username }}</h2>
+  <h2 id="access-categories">Permisos de {{ accessAccount?.username }}</h2>
   <p *ngIf="!accessSettings?.categories?.length">No hay categorías en la Biblioteca.</p>
   <fieldset class="category-options" [disabled]="accessBusy">
     <legend>Categorías permitidas</legend>
@@ -171,6 +171,10 @@
              (change)="toggleCategory(category, allowed.checked)">
       {{ category }}
     </label>
+  </fieldset>
+  <fieldset class="category-options" [disabled]="accessBusy">
+    <legend>Secciones</legend>
+    <label><input type="checkbox" [(ngModel)]="musicAllowed"> Música</label>
   </fieldset>
   <p class="error" *ngIf="accessError" role="alert">{{ accessError }}</p>
   <div class="dialog-actions">

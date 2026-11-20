@@ -14,6 +14,8 @@ import { PrimeNgModule } from '../prime-ng/prime-ng.module';
 import { SharedModule } from 'primeng/api';
 import { NavbarComponent } from './navbar/navbar.component';
 import { RecoveryComponent } from './recovery/recovery.component';
+import { MusicComponent } from './music/music.component';
+import { MusicPlayerComponent } from './music/music-player.component';
 import { AdminComponent } from './admin/admin.component';
 
 @NgModule({
@@ -27,6 +29,8 @@ import { AdminComponent } from './admin/admin.component';
     NavbarComponent,
     AdminComponent,
     RecoveryComponent,
+    MusicComponent,
+    MusicPlayerComponent,
   ],
   imports: [
     CommonModule,
@@ -46,6 +50,8 @@ import { AdminComponent } from './admin/admin.component';
     NavbarComponent,
     AdminComponent,
     RecoveryComponent,
+    MusicComponent,
+    MusicPlayerComponent,
   ]
 })
 export class ComponentsModule { }

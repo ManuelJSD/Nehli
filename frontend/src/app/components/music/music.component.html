@@ -1,0 +1,148 @@
+<div class="music-page">
+  <p class="queue-feedback" role="status">{{ queueStatus }}</p>
+  <header class="music-header">
+    <h1>Música</h1>
+    <a *ngIf="denied" routerLink="/browser">Volver a la Biblioteca</a>
+  </header>
+
+  <p *ngIf="loading || scanning" class="music-state" role="status">
+    {{ scanning ? 'Escaneando la colección de música…' : 'Cargando música…' }}
+  </p>
+  <div class="music-state" *ngIf="error" role="alert">
+    <p>{{ error }}</p>
+    <button *ngIf="!denied" type="button" class="music-button" (click)="load()">Reintentar</button>
+  </div>
+  <p *ngIf="!loading && !scanning && !error && !albums.length" class="music-state">La biblioteca de música está vacía.</p>
+
+  <div class="music-views" *ngIf="!error && albums.length" role="group" aria-label="Vista de Música">
+    <button class="music-button" type="button" [attr.aria-pressed]="view === 'albums'" (click)="view = 'albums'">Álbumes</button>
+    <button class="music-button" type="button" [attr.aria-pressed]="view === 'folders'" (click)="view = 'folders'">Carpetas</button>
+  </div>
+
+  <section *ngIf="!error && albums.length && view === 'folders'">
+    <nav class="folder-path" aria-label="Ubicación en la colección">
+      <ng-container *ngFor="let folder of folderPath; let depth = index; let last = last">
+        <button *ngIf="!last" class="music-button" type="button" (click)="openFolder(folder, depth)">{{ folder.name }}</button>
+        <span *ngIf="last" aria-current="location">{{ folder.name }}</span>
+        <i *ngIf="!last" class="pi pi-angle-right" aria-hidden="true"></i>
+      </ng-container>
+    </nav>
+
+    <div class="album-grid folder-grid" *ngIf="subfolders.length">
+      <button class="album-card" type="button" *ngFor="let folder of subfolders" (click)="openFolder(folder)">
+        <span class="art">
+          <i class="pi pi-folder" aria-hidden="true"></i>
+          <img *ngIf="folder.artworkId as id" [src]="music.artwork(id)" alt="" loading="lazy" (error)="folder.artworkId = undefined">
+        </span>
+        <strong>{{ folder.name }}</strong>
+      </button>
+    </div>
+    <ng-container *ngIf="folderQueue as queue">
+      <button *ngIf="queue.tracks.length" class="music-button primary" type="button" (click)="player.play(queue)">
+        <i class="pi pi-play" aria-hidden="true"></i> Reproducir carpeta
+      </button>
+      <ul class="track-list" *ngIf="queue.tracks.length">
+        <li *ngFor="let track of queue.tracks; let index = index">
+          <button type="button" class="track" (click)="player.play(queue, index)">
+            <span class="track-number">{{ index + 1 }}</span>
+            <span class="track-title"><strong>{{ track.filename || track.title }}</strong></span>
+            <time>{{ duration(track.duration) }}</time>
+            <i class="pi pi-play" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="queue-add" (click)="addTrack(track)"
+                  [attr.aria-label]="'Añadir a la cola: ' + track.title" title="Añadir a la cola">
+            <i class="pi pi-plus" aria-hidden="true"></i>
+          </button>
+        </li>
+      </ul>
+    </ng-container>
+  </section>
+
+  <ng-container *ngIf="!error && albums.length && view === 'albums'">
+    <ng-container *ngIf="album as selected; else collection">
+      <button type="button" class="music-button back-button" (click)="album = undefined">
+        <i class="pi pi-arrow-left" aria-hidden="true"></i> Álbumes
+      </button>
+      <section class="album-detail" aria-labelledby="album-title">
+        <div class="art album-art">
+          <i class="pi pi-volume-up" aria-hidden="true"></i>
+          <img *ngIf="selected.hasArtwork" [src]="music.artwork(selected.id)" alt="" (error)="selected.hasArtwork = false">
+        </div>
+        <div class="album-copy">
+          <p>{{ selected.artist }}</p>
+          <h2 id="album-title">{{ selected.title }}</h2>
+          <p>{{ selected.tracks.length }} {{ selected.tracks.length === 1 ? 'pista' : 'pistas' }}</p>
+          <button type="button" class="music-button primary" (click)="player.play(selected)">
+            <i class="pi pi-play" aria-hidden="true"></i> Reproducir álbum
+          </button>
+        </div>
+      </section>
+      <ol class="track-list">
+        <li *ngFor="let track of selected.tracks; let i = index">
+          <button type="button" class="track" (click)="player.play(selected, i)">
+            <span class="track-number">{{ track.disc > 1 ? track.disc + '.' : '' }}{{ track.number || i + 1 }}</span>
+            <span class="track-title"><strong>{{ track.title }}</strong><small>{{ track.artist }}</small></span>
+            <time>{{ duration(track.duration) }}</time>
+            <i class="pi pi-play" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="queue-add" (click)="addTrack(track)"
+                  [attr.aria-label]="'Añadir a la cola: ' + track.title" title="Añadir a la cola">
+            <i class="pi pi-plus" aria-hidden="true"></i>
+          </button>
+        </li>
+      </ol>
+    </ng-container>
+
+    <ng-template #collection>
+      <div class="music-filters">
+        <label>Buscar en la colección
+          <input type="search" [ngModel]="search" (ngModelChange)="search = $event; filter()" placeholder="Artista, álbum o canción">
+        </label>
+        <label>Artista
+          <select [ngModel]="artist" (ngModelChange)="artist = $event; filter()">
+            <option value="">Todos los artistas</option>
+            <option *ngFor="let name of artists" [value]="name">{{ name }}</option>
+          </select>
+        </label>
+      </div>
+      <section *ngIf="trackResults.length" class="track-results" aria-labelledby="track-results-heading">
+        <div class="collection-heading">
+          <h2 id="track-results-heading">Canciones</h2>
+          <span>{{ trackResults.length }}</span>
+        </div>
+        <ul class="track-list">
+          <li *ngFor="let result of trackResults | slice:0:trackLimit">
+            <button type="button" class="track" (click)="player.play(result.album, result.index)">
+              <i class="pi pi-play" aria-hidden="true"></i>
+              <span class="track-title"><strong>{{ result.track.title }}</strong>
+                <small>{{ result.track.artist }} · {{ result.album.title }}</small></span>
+              <time>{{ duration(result.track.duration) }}</time>
+            </button>
+          <button type="button" class="queue-add" (click)="addTrack(result.track)"
+                  [attr.aria-label]="'Añadir a la cola: ' + result.track.title" title="Añadir a la cola">
+            <i class="pi pi-plus" aria-hidden="true"></i>
+          </button>
+          </li>
+        </ul>
+        <button *ngIf="trackLimit < trackResults.length" type="button" class="music-button load-more"
+                (click)="trackLimit = trackLimit + 20">Mostrar más canciones</button>
+      </section>
+      <div class="collection-heading">
+        <h2>Álbumes</h2>
+        <span aria-live="polite">{{ results.length }} {{ results.length === 1 ? 'álbum' : 'álbumes' }}</span>
+      </div>
+      <p *ngIf="!results.length" class="music-state">No hay álbumes que coincidan con la búsqueda.</p>
+      <div class="album-grid">
+        <button class="album-card" type="button" *ngFor="let entry of results | slice:0:resultsLimit" (click)="album = entry">
+          <span class="art"><i class="pi pi-volume-up" aria-hidden="true"></i>
+            <img *ngIf="entry.hasArtwork" [src]="music.artwork(entry.id)" alt="" loading="lazy" (error)="entry.hasArtwork = false">
+          </span>
+          <strong>{{ entry.title }}</strong>
+          <small>{{ entry.artist }}</small>
+        </button>
+      </div>
+      <button *ngIf="resultsLimit < results.length" type="button" class="music-button load-more"
+              (click)="resultsLimit = resultsLimit + 36">Mostrar más álbumes</button>
+    </ng-template>
+  </ng-container>
+</div>

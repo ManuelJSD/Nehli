@@ -1,0 +1,124 @@
+:host { display: block; }
+.music-page {
+  width: min(100% - 2rem, 74rem);
+  margin-inline: auto;
+  padding-block: clamp(1.5rem, 4vw, 3rem);
+  color: #eff5ff;
+}
+h1, h2, p { margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: -.045em; }
+.music-header { margin-bottom: 1.2rem; }
+.music-header a, .collection-heading span, .music-state { color: #bdd0eb; }
+.music-state { padding: .9rem 0; }
+.music-state button { margin-top: .6rem; }
+.music-filters { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+.music-filters label { display: grid; gap: .35rem; color: #bdd0eb; }
+.music-filters label:first-child { flex: 1 1 18rem; }
+.music-filters input, .music-filters select, .music-button {
+  min-height: 2.65rem;
+  max-width: 100%;
+  border: 1px solid #405474;
+  border-radius: .5rem;
+  padding: .5rem .75rem;
+  font: inherit;
+  color: inherit;
+  background: #19263b;
+}
+.music-button { display: inline-flex; align-items: center; gap: .5rem; cursor: pointer; }
+.music-button:hover, .track:hover, .album-card:hover { background: #243857; }
+.music-button.primary { background: #c1daff; color: #10213a; border-color: #c1daff; }
+.music-button.primary:hover { background: #deebff; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+  outline: 2px solid #a9cbff;
+  outline-offset: 2px;
+}
+.collection-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: .7rem; margin-bottom: .8rem; }
+.collection-heading h2 { font-size: 1.4rem; }
+.album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.4rem), 1fr)); gap: .8rem; }
+.album-card {
+  display: grid;
+  align-content: start;
+  gap: .28rem;
+  min-width: 0;
+  padding: .55rem;
+  border: 1px solid #2b3b53;
+  border-radius: .7rem;
+  background: #121c2d;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.album-card strong { margin-top: .25rem; overflow-wrap: anywhere; }
+.album-card small, .track small { color: #bdd0eb; overflow-wrap: anywhere; }
+.art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: .45rem;
+  background: #253651;
+  color: #afcbf4;
+  font-size: 1.75rem;
+}
+.art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.load-more { margin-top: 1rem; }
+.back-button { margin-bottom: .85rem; }
+.album-detail {
+  display: grid;
+  grid-template-columns: minmax(6rem, 11rem) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(.75rem, 3vw, 1.4rem);
+  padding: clamp(.7rem, 2vw, 1.2rem);
+  background: #172338;
+  border: 1px solid #2b3b53;
+  border-radius: .8rem;
+}
+.album-copy h2 { font-size: clamp(1.25rem, 4vw, 2.4rem); overflow-wrap: anywhere; }
+.album-copy p { color: #bdd0eb; }
+.album-copy .music-button { margin-top: .7rem; }
+.track-list { padding: 0; margin: 1rem 0 0; list-style: none; overflow: hidden; border: 1px solid #2b3b53; border-radius: .7rem; }
+.track-list li + li { border-top: 1px solid #2b3b53; }
+.track {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto 1rem;
+  align-items: center;
+  gap: .65rem;
+  width: 100%;
+  border: 0;
+  padding: .65rem .75rem;
+  color: inherit;
+  background: #121c2d;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.track-title { display: grid; gap: .15rem; overflow-wrap: anywhere; }
+.track-number, .track time { color: #bdd0eb; font-variant-numeric: tabular-nums; }
+
+.track-results { margin-bottom: 1.5rem; }
+.track-results .track-list { margin-top: 0; }
+.track-results .track { grid-template-columns: 1rem minmax(0, 1fr) auto; }
+
+.music-views, .folder-path { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: 1rem; }
+.music-views button[aria-pressed="true"] { background: #c1daff; color: #10213a; border-color: #c1daff; }
+.folder-path [aria-current] { font-weight: 600; overflow-wrap: anywhere; }
+
+.track-list li { display: flex; align-items: stretch; background: #121c2d; }
+.track-list .track { flex: 1; min-width: 0; }
+.queue-add, .queue-panel button {
+  margin: .35rem .45rem;
+  min-width: 2.65rem;
+  min-height: 2.65rem;
+  border: 1px solid #405474;
+  border-radius: .45rem;
+  background: #19263b;
+  color: #eff5ff;
+  cursor: pointer;
+}
+.queue-add:hover { background: #243857; }
+.queue-feedback { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+.folder-grid { margin-bottom: 1rem; }

@@ -116,3 +116,9 @@ Los campos son opcionales y prevalecen sobre los datos externos. Guarda la image
 La caché de fichas, portadas y capturas se guarda en `~/.cache/nehli-metadata`. Puedes cambiar su ubicación con `METADATA_CACHE_FOLDER`. Tras escanear la biblioteca, Nehli prepara las entradas en segundo plano y deja de iniciar tareas de preparación mientras hay reproducción activa.
 
 Los segmentos HLS se reutilizan desde "~/.cache/nehli-segments". Puedes cambiar la carpeta con "SEGMENT_CACHE_FOLDER". La limpieza periódica conserva hasta 512 segmentos recientes y 512 MiB. Si el vídeo H.264 es compatible y los fotogramas clave permiten dividirlo en segmentos independientes, Nehli copia el vídeo al contenedor HLS. Los demás formatos y los subtítulos de imagen siguen usando la conversión habitual.
+
+## Biblioteca de música
+
+Configura `MUSIC_FOLDER` con la carpeta de audio. Nehli busca pistas de forma recursiva y admite una organización como `Artista/Álbum/CD 1/Pista.flac`. Usa las etiquetas para mostrar el artista, el álbum, el disco y el número de pista. Puedes colocar una imagen llamada `cover`, `folder`, `front` o `portada` en JPG, PNG o WebP junto al álbum. Si falta esa imagen, Nehli intenta extraer la carátula incrustada.
+
+Los usuarios activos tienen acceso a Música por defecto. En **Administración → Cuentas → Permisos** se puede cambiar ese acceso por usuario. El catálogo, las carátulas y la reproducción comprueban el permiso en el servidor.
