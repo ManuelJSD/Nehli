@@ -24,11 +24,23 @@ export interface CatalogReview {
   entries: ReviewEntry[];
 }
 
+export interface ScanStatus {
+  lastScan: number | null;
+  files: number;
+  added: number;
+  failed: boolean;
+  available: boolean;
+  scanning: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly url = environments.baseURL + '/api/auth';
 
   constructor(private http: HttpClient) {}
+
+  scanStatus() { return this.http.get<Record<'video' | 'music', ScanStatus>>(environments.baseURL + '/api/access/scans'); }
+  startScan(kind: 'video' | 'music') { return this.http.post(environments.baseURL + '/api/access/scans/' + kind, {}); }
 
   listAccounts() {
     return this.http.get<{ data: AdminAccount[] }>(this.url + '/listar');

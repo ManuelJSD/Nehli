@@ -1,3 +1,4 @@
+import { displayName, seasonNumber } from 'src/app/interfaces/display-name';
 import { videoFiles, videoLink } from 'src/app/interfaces/catalog-navigation';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
@@ -9,6 +10,7 @@ import { WatchProgressService } from 'src/app/services/watch-progress.service';
 import { environments } from 'src/environments/environments';
 
 interface CatalogTitle {
+  displayTitle: string;
   category: string;
   title: string;
   imageUrl: string;
@@ -59,6 +61,23 @@ export class BrowserComponent implements OnInit, OnDestroy {
   featuredPaused = false;
   selectedTitle?: CatalogTitle;
   selectedInfo?: TitleInfo;
+  seriesGroups: { name: string; episodes: ReturnType<typeof videoFiles> }[] = [];
+  watched = new Set<string>();
+  trackingBusy = false;
+  trackingError = '';
+  private trackingRequest?: Subscription;
+  private catalog?: Video;
+
+  get nextUnwatched() {
+    const file = this.seriesGroups.flatMap(group => group.episodes).find(item => !this.watched.has(item.relPath));
+    return file && this.selectedTitle ? videoLink(this.selectedTitle.category, this.selectedTitle.title, file) : undefined;
+  }
+
+  episodeDisplay(name: string): string { return displayName(name); }
+
+  titleDisplay(entry: CatalogTitle, resolved?: string): string {
+    return resolved && resolved !== entry.title ? resolved : entry.displayTitle;
+  }
   selectedCategory = '';
   isLoading = true;
   isError = false;
@@ -97,6 +116,7 @@ export class BrowserComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.trackingRequest?.unsubscribe();
     this.categoryRequest?.unsubscribe();
     this.cancelEdit();
     this.catalogRequest?.unsubscribe();
@@ -116,13 +136,14 @@ export class BrowserComponent implements OnInit, OnDestroy {
     this.isError = false;
     this.catalogRequest = this.videoService.getVideos().subscribe({
       next: videos => {
+        this.catalog = videos;
         this.titles = this.buildCatalog(videos);
         this.recentTitles = this.titles.flatMap(title => {
           const files = videoFiles(videos[title.category][title.title]);
           const latest = files.reduce((best, file) => (file.addedAt || 0) > (best.addedAt || 0) ? file : best, files[0]);
           return latest?.addedAt ? [{
             title, link: videoLink(title.category, title.title, latest),
-            name: files.length > 1 ? latest.name : '', date: latest.addedAt
+            name: files.length > 1 ? displayName(latest.name) : '', date: latest.addedAt
           }] : [];
         }).sort((a, b) => b.date - a.date).slice(0, 12);
         this.progressRequest = this.progress.list().subscribe({
@@ -220,6 +241,31 @@ export class BrowserComponent implements OnInit, OnDestroy {
   openTitle(entry: CatalogTitle): void {
     this.detailRequest?.unsubscribe();
     this.selectedTitle = entry;
+    this.trackingRequest?.unsubscribe();
+    this.trackingBusy = false;
+    this.trackingError = '';
+    this.watched = new Set();
+    this.seriesGroups = [];
+    const catalogEntry = this.catalog?.[entry.category]?.[entry.title];
+    const episodes = catalogEntry ? videoFiles(catalogEntry) : [];
+    if (episodes.length > 1) {
+      const groups = new Map<number, typeof episodes>();
+      const order = new Intl.Collator('es', { numeric: true });
+      for (const episode of episodes.sort((a, b) => order.compare(a.name, b.name))) {
+        const season = seasonNumber(episode.name) ?? Infinity;
+        const files = groups.get(season) || [];
+        files.push(episode);
+        groups.set(season, files);
+      }
+      this.seriesGroups = [...groups].sort(([a], [b]) => a - b).map(([season, files]) => ({
+        name: Number.isFinite(season) ? 'Temporada ' + season : 'Episodios', episodes: files
+      }));
+      this.trackingBusy = true;
+      this.trackingRequest = this.progress.watched(entry.category, entry.title).subscribe({
+        next: paths => { this.watched = new Set(paths); this.trackingBusy = false; },
+        error: () => { this.trackingBusy = false; this.trackingError = 'No se pudo consultar el progreso.'; }
+      });
+    }
     this.selectedInfo = undefined;
     this.loadingDetails = true;
     this.changeDetector.detectChanges();
@@ -231,6 +277,26 @@ export class BrowserComponent implements OnInit, OnDestroy {
       },
       error: () => { this.loadingDetails = false; }
     });
+  }
+
+  markEpisode(path: string): void {
+    const entry = this.selectedTitle;
+    if (!entry || this.trackingBusy) return;
+    const completed = !this.watched.has(path);
+    this.trackingBusy = true;
+    this.trackingError = '';
+    this.trackingRequest = this.progress.mark(entry.category, entry.title, path, completed).subscribe({
+      next: () => {
+        if (completed) this.watched.add(path);
+        else this.watched.delete(path);
+        this.trackingBusy = false;
+      },
+      error: () => { this.trackingBusy = false; this.trackingError = 'No se pudo actualizar el episodio.'; }
+    });
+  }
+
+  watchedCount(episodes: ReturnType<typeof videoFiles>): number {
+    return episodes.filter(file => this.watched.has(file.relPath)).length;
   }
 
   closeTitle(): void {
@@ -378,6 +444,7 @@ export class BrowserComponent implements OnInit, OnDestroy {
       Object.entries(entries).map(([title, entry]) => {
         const thumbnailParams = new URLSearchParams({ category, title });
         return {
+          displayTitle: displayName(title),
           category,
           title,
           imageUrl: environments.baseURL + '/api/video/thumbnail?' + thumbnailParams,
@@ -399,8 +466,8 @@ export class BrowserComponent implements OnInit, OnDestroy {
         const minutes = Math.floor(seconds / 60);
         const time = minutes + ':' + String(seconds % 60).padStart(2, '0');
         matching.set(item.path, {
-          ...item, title: title.title, imageUrl: title.imageUrl,
-          episode: video.name.replace(/\.[a-z0-9]{2,5}$/i, ''),
+          ...item, title: title.displayTitle, imageUrl: title.imageUrl,
+          episode: displayName(video.name),
           playUrl: ['/videos', title.category, title.title, video.name],
           percent: item.position / item.duration * 100,
           time

@@ -18,7 +18,7 @@
         <img class="featured-backdrop" [src]="featured.imageUrl" alt="" (error)="onThumbnailError($event)">
         <div class="featured-copy">
           <span class="featured-category">{{ featured.category }}</span>
-          <h2>{{ featuredInfo?.title || featured.title }}</h2>
+          <h2>{{ titleDisplay(featured, featuredInfo?.title) }}</h2>
           <p *ngIf="featuredInfo?.synopsis">{{ featuredInfo?.synopsis }}</p>
           <a *ngIf="featuredInfo?.sourceUrl as source"
              class="metadata-source" [href]="source" target="_blank" rel="noopener noreferrer">Wikipedia · CC BY-SA</a>
@@ -71,7 +71,7 @@
                [routerLink]="item.link.url" [queryParams]="item.link.params">
               <img [src]="item.title.imageUrl" alt="" loading="lazy" decoding="async" (error)="onThumbnailError($event)">
               <span class="continue-copy">
-                <strong>{{ item.title.title }}</strong>
+                <strong>{{ item.title.displayTitle }}</strong>
                 <small>{{ item.name || item.title.category }}</small>
                 <small class="recent-date">{{ item.date | date:'dd/MM/yyyy' }}</small>
               </span>
@@ -94,7 +94,7 @@
           <button *ngFor="let entry of visibleTitles; trackBy: trackByTitle"
                   class="title-card" type="button" (click)="openTitle(entry)" [attr.title]="entry.title">
             <img [src]="entry.imageUrl" alt="" loading="lazy" decoding="async" (error)="onThumbnailError($event)">
-            <span class="card-text"><strong>{{ entry.title }}</strong><small>{{ entry.category }}</small></span>
+            <span class="card-text"><strong>{{ entry.displayTitle }}</strong><small>{{ entry.category }}</small></span>
           </button>
         </div>
       </section>
@@ -117,7 +117,7 @@
     <img [src]="entry.imageUrl" alt="" (error)="onThumbnailError($event)">
     <div class="dialog-copy">
       <span class="featured-category">{{ entry.category }}<ng-container *ngIf="selectedInfo?.year"> · {{ selectedInfo?.year }}</ng-container></span>
-      <h2 id="title-dialog-heading">{{ selectedInfo?.title || entry.title }}</h2>
+      <h2 id="title-dialog-heading">{{ titleDisplay(entry, selectedInfo?.title) }}</h2>
       <ng-container *ngIf="!editing; else editor">
         <p *ngIf="loadingDetails" role="status">Cargando información…</p>
         <p *ngIf="!loadingDetails">{{ selectedInfo?.synopsis || 'Sin sinopsis disponible.' }}</p>
@@ -132,6 +132,22 @@
             <i class="pi pi-pencil" aria-hidden="true"></i> Editar ficha
           </button>
         </div>
+        <section class="series-progress" *ngIf="seriesGroups.length">
+          <a *ngIf="!trackingBusy && !trackingError && nextUnwatched as next" class="quiet-button"
+             [routerLink]="next.url" [queryParams]="next.params" (click)="closeTitle()">Ver el siguiente pendiente</a>
+          <p *ngIf="trackingError" role="alert">{{ trackingError }}</p>
+          <details *ngFor="let group of seriesGroups">
+            <summary>{{ group.name }} · {{ watchedCount(group.episodes) }}/{{ group.episodes.length }} vistos</summary>
+            <ul>
+              <li *ngFor="let episode of group.episodes">
+                <span [title]="episode.name">{{ episodeDisplay(episode.name) }}</span>
+                <button class="quiet-button" type="button" [disabled]="trackingBusy" (click)="markEpisode(episode.relPath)">
+                  {{ watched.has(episode.relPath) ? 'Marcar pendiente' : 'Marcar visto' }}
+                </button>
+              </li>
+            </ul>
+          </details>
+        </section>
       </ng-container>
       <ng-template #editor>
         <form class="catalog-editor" (ngSubmit)="saveEdit()">
@@ -175,6 +191,7 @@
           </fieldset>
         </form>
       </ng-template>
+      <p *ngIf="entry.displayTitle !== entry.title" class="metadata-source">Nombre original: {{ entry.title }}</p>
       <p *ngIf="editError" role="alert">{{ editError }}</p>
     </div>
   </div>

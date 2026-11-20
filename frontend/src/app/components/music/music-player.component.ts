@@ -46,6 +46,21 @@ export class MusicPlayerComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  playlistName = '';
+  playlistStatus = '';
+  savingPlaylist = false;
+
+  saveQueue(): void {
+    const name = this.playlistName.trim();
+    if (!this.selected || !name || this.savingPlaylist) return;
+    this.savingPlaylist = true;
+    this.playlistStatus = '';
+    this.music.savePlaylist('new', name, this.selected.tracks.map(track => track.id)).subscribe({
+      next: () => { this.playlistName = ''; this.playlistStatus = 'Lista guardada.'; this.savingPlaylist = false; },
+      error: () => { this.playlistStatus = 'No se pudo guardar la lista.'; this.savingPlaylist = false; }
+    });
+  }
+
   get track() {
     return this.selected?.tracks[this.selected.index];
   }

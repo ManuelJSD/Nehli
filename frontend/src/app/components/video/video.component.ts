@@ -1,3 +1,4 @@
+import { displayName, seasonNumber } from 'src/app/interfaces/display-name';
 import { LoginService } from 'src/app/services/login.service';
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
@@ -161,7 +162,7 @@ export class VideoComponent implements OnInit, OnDestroy {
   }
 
   private episodeName(filename: string): string {
-    return filename.replace(/\.[a-z0-9]{2,5}$/i, '');
+    return displayName(filename);
   }
 
   private flattenEpisodes(nodes: TreeNode[]): TreeNode[] {
@@ -170,7 +171,7 @@ export class VideoComponent implements OnInit, OnDestroy {
 
   private buildTreeNodes(data: any, parentKey = ''): TreeNode[] {
     const compare = (a: string, b: string) => a.localeCompare(b, 'es', { numeric: true });
-    const folders = Object.entries(data?.folders || {}).sort(([a], [b]) => compare(a, b)).map(([label, contents]) => {
+    const folders: TreeNode[] = Object.entries(data?.folders || {}).sort(([a], [b]) => compare(a, b)).map(([label, contents]) => {
       const key = parentKey + encodeURIComponent(label) + '/';
       return {
         key: 'folder:' + key,
@@ -187,7 +188,19 @@ export class VideoComponent implements OnInit, OnDestroy {
       icon: 'pi pi-play',
       data: video
     }));
-    return [...folders, ...videos.sort((a, b) => compare(a.data.name, b.data.name))];
+    const seasons = new Map<number, TreeNode>();
+    for (const item of videos.sort((a, b) => compare(a.data.name, b.data.name))) {
+      const number = seasonNumber(item.data.name);
+      if (number === undefined) {
+        folders.push(item);
+        continue;
+      }
+      if (!seasons.has(number)) seasons.set(number, {
+        key: 'season:' + parentKey + number, label: 'Temporada ' + number, expanded: true, selectable: false, children: []
+      });
+      seasons.get(number)!.children!.push(item);
+    }
+    return [...folders, ...[...seasons].sort(([a], [b]) => a - b).map(([, season]) => season)];
   }
 
   playNextEpisode(): void {

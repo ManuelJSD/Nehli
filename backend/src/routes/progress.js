@@ -3,6 +3,9 @@ const { createHash } = require('node:crypto');
 const { sequelize } = require('../config/mysql');
 const WatchProgress = require('../models/watchProgress');
 const session = require('../middleware/session');
+const { requireCategory } = require('../utils/accessPolicy');
+const { getVideos } = require('../controllers/video');
+const { Op } = require('sequelize');
 
 const router = express.Router();
 
@@ -35,6 +38,45 @@ router.get('/', async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+});
+
+function catalogFiles(entry) {
+    return [...(entry.videos || []), ...Object.values(entry.folders || {}).flatMap(catalogFiles)];
+}
+
+async function titleFiles(req) {
+    const { category, title } = req.query;
+    if (typeof category !== 'string' || typeof title !== 'string') return [];
+    const catalog = await getVideos();
+    if (!Object.hasOwn(catalog, category) || !Object.hasOwn(catalog[category], title)) return [];
+    return catalogFiles(catalog[category][title]);
+}
+
+router.get('/series', requireCategory, async (req, res, next) => {
+    try {
+        const paths = (await titleFiles(req)).map(file => episodeKey(file.relPath));
+        if (!paths.length) return res.json([]);
+        const watched = await WatchProgress.findAll({
+            where: { account_id: req.user.id, completed: true, episode_key: { [Op.in]: paths } },
+            attributes: ['episode_path']
+        });
+        res.json(watched.map(row => row.episode_path));
+    } catch (error) { next(error); }
+});
+
+router.patch('/series', requireCategory, async (req, res, next) => {
+    try {
+        const { path, completed } = req.body || {};
+        const key = episodeKey(path);
+        if (!key || typeof completed !== 'boolean') return res.sendStatus(400);
+        if (!(await titleFiles(req)).some(file => file.relPath === path)) return res.sendStatus(404);
+        await sequelize.query(`
+            INSERT INTO watch_progress (account_id, episode_key, episode_path, position, duration, completed, observed_at)
+            VALUES ($id, $key, $path, 0, 1, $completed, $now)
+            ON DUPLICATE KEY UPDATE completed = VALUES(completed), position = 0, observed_at = VALUES(observed_at)
+        `, { bind: { id: req.user.id, key, path, completed, now: Date.now() } });
+        res.sendStatus(204);
+    } catch (error) { next(error); }
 });
 
 router.put('/', async (req, res, next) => {

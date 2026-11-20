@@ -507,3 +507,8 @@ button:focus-visible {
   .catalog-editor-search { grid-template-columns: minmax(0, 1fr); }
   .catalog-editor-search button { justify-self: start; }
 }
+.series-progress { display: grid; gap: .65rem; margin-top: 1rem; }
+.series-progress summary { cursor: pointer; padding-block: .4rem; }
+.series-progress ul { list-style: none; padding: 0; margin: 0; }
+.series-progress li { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding-block: .3rem; }
+.series-progress li span { overflow-wrap: anywhere; }

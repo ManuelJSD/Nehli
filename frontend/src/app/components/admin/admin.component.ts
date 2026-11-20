@@ -1,8 +1,8 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { AccessSettings, AccountAccessService, CategoryPolicy, Invite } from '../../services/account-access.service';
 import { ActivatedRoute } from '@angular/router';
-import { Subscription } from 'rxjs';
-import { AccountRole, AdminAccount, AdminService, CatalogReview, ReviewIssue } from '../../services/admin.service';
+import { exhaustMap, Subscription, timer } from 'rxjs';
+import { AccountRole, AdminAccount, AdminService, CatalogReview, ReviewIssue, ScanStatus } from '../../services/admin.service';
 import { LoginService } from '../../services/login.service';
 
 @Component({
@@ -32,6 +32,10 @@ export class AdminComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('accessDialog', { static: true }) private accessDialog!: ElementRef<HTMLDialogElement>;
   accessSettings?: AccessSettings;
   accessBusy = false;
+  scans?: Record<'video' | 'music', ScanStatus>;
+  readonly scanKinds = ['video', 'music'] as const;
+  scanError = '';
+  private readonly scanRequests = new Subscription();
   accessError = '';
   accessAccount?: AdminAccount;
   deniedCategories: string[] = [];
@@ -65,6 +69,10 @@ export class AdminComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit(): void {
     this.load();
     this.loadAccessSettings();
+    this.scanRequests.add(timer(0, 5000).pipe(exhaustMap(() => this.api.scanStatus())).subscribe({
+      next: data => { this.scans = data; },
+      error: () => { this.scanError = 'No se pudo consultar el estado de los escaneos.'; }
+    }));
     this.loadInvites();
     if (this.route.snapshot.fragment === 'review') this.loadReview();
   }
@@ -74,6 +82,7 @@ export class AdminComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    this.scanRequests.unsubscribe();
     this.listRequest?.unsubscribe();
     this.roleRequest?.unsubscribe();
     this.reviewRequest?.unsubscribe();
@@ -136,6 +145,16 @@ export class AdminComponent implements OnInit, OnDestroy, AfterViewInit {
   get reviewPageEntries() {
     const start = this.reviewPage * this.reviewPageSize;
     return this.reviewResults.slice(start, start + this.reviewPageSize);
+  }
+
+  startScan(kind: 'video' | 'music'): void {
+    const status = this.scans?.[kind];
+    if (!status || status.scanning || !status.available) return;
+    status.scanning = true;
+    this.scanError = '';
+    this.scanRequests.add(this.api.startScan(kind).subscribe({
+      error: () => { status.scanning = false; this.scanError = 'No se pudo iniciar el escaneo.'; }
+    }));
   }
 
   loadAccessSettings(): void {

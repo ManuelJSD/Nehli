@@ -17,8 +17,37 @@
   <div class="music-views" *ngIf="!error && albums.length" role="group" aria-label="Vista de Música">
     <button class="music-button" type="button" [attr.aria-pressed]="view === 'albums'" (click)="view = 'albums'">Álbumes</button>
     <button class="music-button" type="button" [attr.aria-pressed]="view === 'folders'" (click)="view = 'folders'">Carpetas</button>
+    <button class="music-button" type="button" [attr.aria-pressed]="view === 'collection'"
+            (click)="view = 'collection'; loadCollection()">Mis listas</button>
   </div>
 
+  <p *ngIf="collectionError" role="alert">{{ collectionError }}</p>
+  <section *ngIf="view === 'collection'">
+    <h2>Mis listas</h2>
+    <div class="music-views">
+      <button class="music-button" type="button" *ngFor="let item of playlists" (click)="list = item">{{ item.name }}</button>
+    </div>
+    <p *ngIf="!playlists.length">Puedes guardar la cola actual desde el reproductor.</p>
+    <ng-container *ngIf="list as selected">
+      <h3>{{ selected.name }}</h3>
+      <button class="music-button primary" type="button" (click)="playCollection(selected.name, selected.tracks)">Reproducir lista</button>
+      <ol class="track-list">
+        <li class="collection-row" *ngFor="let id of selected.tracks; let i = index">
+          <span>{{ trackLabel(id) }}</span>
+          <button class="music-button" type="button" [disabled]="collectionBusy || i === 0" (click)="moveTrack(i, -1)" aria-label="Subir pista">↑</button>
+          <button class="music-button" type="button" [disabled]="collectionBusy || i === selected.tracks.length - 1" (click)="moveTrack(i, 1)" aria-label="Bajar pista">↓</button>
+        </li>
+      </ol>
+    </ng-container>
+    <h3>Favoritos</h3>
+    <p *ngIf="!favoriteTracks.length">Aún no tienes pistas favoritas.</p>
+    <ul class="track-list" *ngIf="favoriteTracks.length">
+      <li class="collection-row" *ngFor="let track of favoriteTracks">
+        <button class="track" type="button" (click)="playCollection(track.title, [track.id])">{{ track.title }}</button>
+        <button class="queue-add" type="button" (click)="toggleFavorite(track)" [attr.aria-label]="'Quitar de favoritos: ' + track.title">♥</button>
+      </li>
+    </ul>
+  </section>
   <section *ngIf="!error && albums.length && view === 'folders'">
     <nav class="folder-path" aria-label="Ubicación en la colección">
       <ng-container *ngFor="let folder of folderPath; let depth = index; let last = last">
@@ -49,6 +78,7 @@
             <time>{{ duration(track.duration) }}</time>
             <i class="pi pi-play" aria-hidden="true"></i>
           </button>
+          <button type="button" class="queue-add" (click)="toggleFavorite(track)" [attr.aria-pressed]="favorites.has(track.id)" [attr.aria-label]="'Favorito: ' + track.title"><i class="pi" [ngClass]="favorites.has(track.id) ? 'pi-heart-fill' : 'pi-heart'" aria-hidden="true"></i></button>
           <button type="button" class="queue-add" (click)="addTrack(track)"
                   [attr.aria-label]="'Añadir a la cola: ' + track.title" title="Añadir a la cola">
             <i class="pi pi-plus" aria-hidden="true"></i>
@@ -85,6 +115,7 @@
             <time>{{ duration(track.duration) }}</time>
             <i class="pi pi-play" aria-hidden="true"></i>
           </button>
+          <button type="button" class="queue-add" (click)="toggleFavorite(track)" [attr.aria-pressed]="favorites.has(track.id)" [attr.aria-label]="'Favorito: ' + track.title"><i class="pi" [ngClass]="favorites.has(track.id) ? 'pi-heart-fill' : 'pi-heart'" aria-hidden="true"></i></button>
           <button type="button" class="queue-add" (click)="addTrack(track)"
                   [attr.aria-label]="'Añadir a la cola: ' + track.title" title="Añadir a la cola">
             <i class="pi pi-plus" aria-hidden="true"></i>
@@ -118,6 +149,7 @@
                 <small>{{ result.track.artist }} · {{ result.album.title }}</small></span>
               <time>{{ duration(result.track.duration) }}</time>
             </button>
+          <button type="button" class="queue-add" (click)="toggleFavorite(result.track)" [attr.aria-pressed]="favorites.has(result.track.id)" [attr.aria-label]="'Favorito: ' + result.track.title"><i class="pi" [ngClass]="favorites.has(result.track.id) ? 'pi-heart-fill' : 'pi-heart'" aria-hidden="true"></i></button>
           <button type="button" class="queue-add" (click)="addTrack(result.track)"
                   [attr.aria-label]="'Añadir a la cola: ' + result.track.title" title="Añadir a la cola">
             <i class="pi pi-plus" aria-hidden="true"></i>

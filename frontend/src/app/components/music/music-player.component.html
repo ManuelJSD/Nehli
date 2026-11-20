@@ -59,6 +59,12 @@
         </button>
       </li>
     </ol>
+    <form class="save-queue" (ngSubmit)="saveQueue()">
+      <label for="playlist-name">Guardar cola como lista</label>
+      <input id="playlist-name" name="playlistName" [(ngModel)]="playlistName" maxlength="100" placeholder="Nombre de la lista">
+      <button type="submit" [disabled]="savingPlaylist || !playlistName.trim()">Guardar</button>
+      <p *ngIf="playlistStatus" role="status">{{ playlistStatus }}</p>
+    </form>
   </section>
   <audio #audio hidden preload="none" crossorigin="use-credentials"
          (play)="syncAudio()" (pause)="syncAudio()" (timeupdate)="syncAudio()"

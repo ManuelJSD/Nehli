@@ -29,6 +29,7 @@ let lastCacheTime = 0;
 const CACHE_TTL = 300000; // 5 minutos
 let refreshPromise = null;
 let probeCache = new Map();
+const scanner = require('../utils/scannerStatus').createScannerStatus(videoFolder);
 const catalogListeners = [];
 
 async function isVideo(filePath, scan) {
@@ -158,8 +159,9 @@ async function generateVideoCatalog() {
       }
       if (Object.keys(titles).length) catalog[categoryName] = titles;
     }
-  } catch (err) {
-    console.error("[Escáner] Error crítico:", err.message);
+  } catch (error) {
+    console.error('[Escáner] No se pudo escanear la biblioteca:', error.code || error.name);
+    throw error;
   }
 
   probeCache = scan.probes;
@@ -169,27 +171,40 @@ async function generateVideoCatalog() {
 /**
  * Caché con refresco inteligente
  */
-async function getVideos() {
-  if (videoCache && Date.now() - lastCacheTime < CACHE_TTL) {
+async function getVideos(force = false) {
+  if (!force && videoCache && Date.now() - lastCacheTime < CACHE_TTL) {
     return videoCache;
   }
 
   if (!refreshPromise) {
-    refreshPromise = generateVideoCatalog().then(newVideos => {
+    refreshPromise = scanner.checkDirectory().then(available => {
+      if (!available) { scanner.fail(); return null; }
+      return generateVideoCatalog();
+    }).then(newVideos => {
+      if (!newVideos) {
+        lastCacheTime = Date.now();
+        return videoCache || {};
+      }
+      const ids = entry => [...entry.videos.map(file => file.relPath), ...Object.values(entry.folders).flatMap(ids)];
+      scanner.complete(Object.values(newVideos).flatMap(group => Object.values(group).flatMap(ids)));
       videoCache = newVideos;
       lastCacheTime = Date.now();
       return newVideos;
+    }).catch(() => {
+      scanner.fail();
+      lastCacheTime = Date.now();
+      return videoCache || {};
     }).finally(() => {
       refreshPromise = null;
     });
     refreshPromise.catch(error => console.error('[Catálogo Video] Fallo en la actualización:', error));
   }
 
-  return videoCache ?? refreshPromise;
+  return force ? refreshPromise : videoCache ?? refreshPromise;
 }
 
 function onCatalogRefresh(listener) {
   catalogListeners.push(listener);
 }
 
-module.exports = { getVideos, onCatalogRefresh };
+module.exports = { getVideos, onCatalogRefresh, scanStatus: () => scanner.read(!!refreshPromise) };

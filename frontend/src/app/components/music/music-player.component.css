@@ -107,3 +107,4 @@ input[type="range"]:disabled { cursor: default; opacity: .65; }
 .queue-panel small { color: #bdd0eb; }
 .queue-panel button { width: 2.4rem; height: 2.4rem; flex: 0 0 auto; color: inherit; background: #19263b; border: 1px solid #405474; border-radius: .45rem; cursor: pointer; }
 .queue-panel button:hover { background: #243857; }
+.save-queue { display:grid; gap:.35rem; margin-top:.8rem; } .save-queue input { min-width:0; padding:.4rem; color:inherit; background:#142035; border:1px solid #405474; } .save-queue button { width:auto; justify-self:start; padding-inline:.65rem; }

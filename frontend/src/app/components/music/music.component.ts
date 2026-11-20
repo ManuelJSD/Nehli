@@ -1,7 +1,7 @@
 import { ActivatedRoute } from '@angular/router';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { exhaustMap, Subscription, takeWhile, timer } from 'rxjs';
-import { MusicAlbum, MusicService, MusicTrack } from '../../services/music.service';
+import { MusicAlbum, MusicPlaylist, MusicService, MusicTrack } from '../../services/music.service';
 import { MusicPlayerService } from '../../services/music-player.service';
 
 interface MusicFolder {
@@ -27,7 +27,7 @@ export class MusicComponent implements OnInit, OnDestroy {
   linkedTrack?: string;
   search = '';
   artist = '';
-  view: 'albums' | 'folders' = 'albums';
+  view: 'albums' | 'folders' | 'collection' = 'albums';
   folderPath: MusicFolder[] = [];
   folderQueue?: MusicAlbum;
   private readonly folderOrder = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
@@ -36,12 +36,19 @@ export class MusicComponent implements OnInit, OnDestroy {
   error = '';
   denied = false;
   queueStatus = '';
+  favorites = new Set<string>();
+  playlists: MusicPlaylist[] = [];
+  list?: MusicPlaylist;
+  libraryTracks = new Map<string, MusicTrack>();
+  collectionError = '';
+  collectionBusy = false;
+  private readonly collectionRequests = new Subscription();
   private request?: Subscription;
 
   constructor(public music: MusicService, public player: MusicPlayerService, private route: ActivatedRoute) {}
 
-  ngOnInit(): void { this.load(); }
-  ngOnDestroy(): void { this.request?.unsubscribe(); }
+  ngOnInit(): void { this.load(); this.loadCollection(); }
+  ngOnDestroy(): void { this.request?.unsubscribe(); this.collectionRequests.unsubscribe(); }
 
   load(): void {
     this.request?.unsubscribe();
@@ -59,6 +66,7 @@ export class MusicComponent implements OnInit, OnDestroy {
           ...album,
           tracks: album.tracks.map(track => ({ ...track, artworkId: album.hasArtwork ? album.id : undefined }))
         }));
+        this.libraryTracks = new Map(this.albums.flatMap(album => album.tracks.map(track => [track.id, track])));
         this.buildFolders();
         const params = this.route.snapshot.queryParamMap;
         const albumId = params.get('album');
@@ -72,6 +80,53 @@ export class MusicComponent implements OnInit, OnDestroy {
         this.denied = response.status === 403;
         this.error = response.error?.error || 'No se pudo cargar Música.';
       }
+    });
+  }
+
+  get favoriteTracks(): MusicTrack[] { return this.resolveTracks([...this.favorites]); }
+
+  loadCollection(): void {
+    this.collectionRequests.add(this.music.collection().subscribe({
+      next: data => { this.favorites = new Set(data.favorites); this.playlists = data.playlists; },
+      error: () => { this.collectionError = 'No se pudieron cargar las listas y favoritos.'; }
+    }));
+  }
+
+  toggleFavorite(track: MusicTrack): void {
+    const favorite = !this.favorites.has(track.id);
+    this.collectionRequests.add(this.music.favorite(track.id, favorite).subscribe({
+      next: () => { if (favorite) this.favorites.add(track.id); else this.favorites.delete(track.id); },
+      error: () => { this.collectionError = 'No se pudo actualizar el favorito.'; }
+    }));
+  }
+
+  playCollection(name: string, ids: string[]): void {
+    this.player.play({ id: name, title: name, artist: '', hasArtwork: false, tracks: this.resolveTracks(ids) });
+  }
+
+  trackLabel(id: string): string { return this.libraryTracks.get(id)?.title || 'Pista no disponible'; }
+
+  moveTrack(index: number, direction: -1 | 1): void {
+    const list = this.list;
+    const target = index + direction;
+    if (!list || target < 0 || target >= list.tracks.length || this.collectionBusy) return;
+    const tracks = [...list.tracks];
+    [tracks[index], tracks[target]] = [tracks[target], tracks[index]];
+    this.collectionBusy = true;
+    this.collectionRequests.add(this.music.savePlaylist(list.id, list.name, tracks).subscribe({
+      next: updated => {
+        this.playlists = this.playlists.map(item => item.id === updated.id ? updated : item);
+        this.list = updated;
+        this.collectionBusy = false;
+      },
+      error: () => { this.collectionBusy = false; this.collectionError = 'No se pudo guardar el orden.'; }
+    }));
+  }
+
+  private resolveTracks(ids: string[]): MusicTrack[] {
+    return ids.flatMap(id => {
+      const track = this.libraryTracks.get(id);
+      return track ? [track] : [];
     });
   }
 

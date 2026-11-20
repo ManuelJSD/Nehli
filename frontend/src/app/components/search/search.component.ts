@@ -1,3 +1,4 @@
+import { displayName } from 'src/app/interfaces/display-name';
 import { environments } from 'src/environments/environments';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
@@ -66,9 +67,9 @@ export class SearchComponent implements OnInit, OnDestroy {
           const files = videoFiles(entry);
           if (!files.length) continue;
           const artwork = environments.baseURL + '/api/video/thumbnail?' + new URLSearchParams({ category, title });
-          this.entries.push({ title, detail: category, category, artwork, ...videoLink(category, title, files[0]) });
+          this.entries.push({ title: displayName(title), keywords: title, detail: category, category, artwork, ...videoLink(category, title, files[0]) });
           if (files.length > 1) for (const file of files) {
-            this.entries.push({ title: file.name, detail: title + ' · ' + category, category, artwork, ...videoLink(category, title, file) });
+            this.entries.push({ title: displayName(file.name), keywords: file.name, detail: displayName(title) + ' · ' + category, category, artwork, ...videoLink(category, title, file) });
           }
         }
       }

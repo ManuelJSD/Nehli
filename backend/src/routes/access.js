@@ -70,4 +70,21 @@ router.patch('/accounts/:id', session, admin, async (req, res, next) => {
     } catch (error) { next(error); }
 });
 
+const videoScanner = require('../controllers/video');
+const musicScanner = require('../controllers/musica');
+
+router.get('/scans', session, admin, async (req, res, next) => {
+    try {
+        const [video, music] = await Promise.all([videoScanner.scanStatus(), musicScanner.scanStatus()]);
+        res.json({ video, music });
+    } catch (error) { next(error); }
+});
+
+router.post('/scans/:kind', session, admin, (req, res) => {
+    if (req.params.kind === 'video') void videoScanner.getVideos(true).catch(() => {});
+    else if (req.params.kind === 'music') void musicScanner.refresh(true);
+    else return res.sendStatus(400);
+    res.status(202).json({});
+});
+
 module.exports = router;

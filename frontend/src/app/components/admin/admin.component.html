@@ -98,6 +98,24 @@
     </ul>
   </section>
 
+  <section class="account-panel review-panel" aria-labelledby="scanner-heading">
+    <div class="panel-header"><h2 id="scanner-heading">Estado de la biblioteca</h2></div>
+    <p *ngIf="scanError" class="panel-message" role="alert">{{ scanError }}</p>
+    <ul class="review-list" *ngIf="scans as current">
+      <li *ngFor="let kind of scanKinds">
+        <div class="review-title">
+          <strong>{{ kind === 'video' ? 'Vídeo' : 'Música' }}</strong>
+          <small *ngIf="!current[kind].available">Carpeta inaccesible</small>
+          <small *ngIf="current[kind].scanning" role="status">Escaneando…</small>
+          <small *ngIf="current[kind].failed && current[kind].available">El último escaneo falló</small>
+          <small *ngIf="current[kind].lastScan">Último escaneo: {{ current[kind].lastScan | date:'dd/MM/yyyy HH:mm' }} · {{ current[kind].files }} archivos · {{ current[kind].added }} añadidos</small>
+        </div>
+        <button class="action secondary" type="button" (click)="startScan(kind)"
+                [disabled]="!current[kind].available || current[kind].scanning">Reescanear {{ kind === 'video' ? 'vídeo' : 'música' }}</button>
+      </li>
+    </ul>
+  </section>
+
   <section id="review" #catalogReview class="account-panel review-panel" aria-labelledby="admin-catalog">
     <div class="panel-header">
       <div>

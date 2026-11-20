@@ -23,11 +23,23 @@ export interface MusicAlbum {
   tracks: MusicTrack[];
 }
 
+export interface MusicPlaylist {
+  id: string;
+  name: string;
+  tracks: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class MusicService {
   private readonly url = environments.baseURL + '/api/musica';
 
   constructor(private http: HttpClient) {}
+
+  collection() { return this.http.get<{ favorites: string[]; playlists: MusicPlaylist[] }>(this.url + '/collection'); }
+  favorite(id: string, favorite: boolean) { return this.http.put<void>(this.url + '/favorites/' + id, { favorite }); }
+  savePlaylist(id: string, name: string, tracks: string[]) {
+    return this.http.put<MusicPlaylist>(this.url + '/playlists/' + id, { name, tracks });
+  }
 
   access() { return this.http.get<{ allowed: boolean }>(this.url + '/access'); }
 

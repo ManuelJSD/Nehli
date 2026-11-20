@@ -6,6 +6,7 @@ const { promisify } = require('node:util');
 const disk = require('../utils/metadataCache');
 
 const root = path.resolve(process.env.MUSIC_FOLDER || './musica');
+const scanner = require('../utils/scannerStatus').createScannerStatus(root);
 const run = promisify(execFile);
 const collator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
 const containers = new Map([
@@ -151,13 +152,22 @@ async function scan() {
     return { albums, tracks, summaries };
 }
 
-function refresh() {
-    if (!refreshing && Date.now() >= nextScan) {
-        refreshing = scan().then(result => {
+function refresh(force = false) {
+    if (!refreshing && (force || Date.now() >= nextScan)) {
+        refreshing = scanner.checkDirectory().then(available => {
+            if (!available) { scanner.fail(); return null; }
+            return scan();
+        }).then(result => {
+            if (!result) {
+                catalog ??= { albums: new Map(), tracks: new Map(), summaries: [] };
+                return;
+            }
+            scanner.complete(result.tracks.keys());
             catalog = result;
             scanFailed = false;
         }).catch(error => {
             scanFailed = true;
+            scanner.fail();
             console.error('No se pudo escanear la biblioteca de música:', error.code || error.name);
         }).finally(() => {
             nextScan = Date.now() + (scanFailed ? 5000 : rescanInterval);
@@ -253,4 +263,4 @@ async function playTrack(req, res, next) {
     } catch (error) { next(error); }
 }
 
-module.exports = { getMusicas, getCatalog, sendArtwork, playTrack };
+module.exports = { getMusicas, getCatalog, sendArtwork, playTrack, refresh, scanStatus: () => scanner.read(!!refreshing) };

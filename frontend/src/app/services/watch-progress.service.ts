@@ -17,6 +17,14 @@ export class WatchProgressService {
     return defer(() => Promise.all(this.pending)).pipe(switchMap(() => this.http.get<WatchProgress[]>(this.url)));
   }
 
+  watched(category: string, title: string) {
+    return this.http.get<string[]>(this.url + '/series', { params: { category, title } });
+  }
+
+  mark(category: string, title: string, path: string, completed: boolean) {
+    return this.http.patch<void>(this.url + '/series', { path, completed }, { params: { category, title } });
+  }
+
   get(path: string) {
     return this.http.get<WatchProgress | null>(this.url, { params: { path } });
   }
