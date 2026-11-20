@@ -2,7 +2,7 @@ export interface Video {
   [category: string]: {
     [subcategory: string]: {
       folders: any;
-      videos: { name: string; relPath: string }[];
+      videos: { name: string; relPath: string; addedAt?: number }[];
       thumbnails: string[];
     };
   };

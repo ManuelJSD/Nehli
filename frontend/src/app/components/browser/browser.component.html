@@ -5,11 +5,6 @@
         <a *ngIf="fromReview" class="metadata-source" routerLink="/admin" fragment="review">Volver a fichas por revisar</a>
         <h1>Biblioteca</h1>
       </div>
-      <div class="search-field" *ngIf="!isLoading && !isError && featured">
-        <i class="pi pi-search" aria-hidden="true"></i>
-        <input type="search" aria-label="Buscar título" placeholder="Buscar título"
-               [ngModel]="query" (ngModelChange)="setQuery($event)">
-      </div>
     </header>
 
     <p *ngIf="isLoading" class="catalog-state" role="status">Cargando biblioteca…</p>
@@ -19,7 +14,7 @@
     </div>
 
     <ng-container *ngIf="!isLoading && !isError">
-      <section *ngIf="featured && !query.trim() && !selectedCategory" class="featured" #featuredSection aria-label="Título destacado">
+      <section *ngIf="featured && !selectedCategory" class="featured" #featuredSection aria-label="Título destacado">
         <img class="featured-backdrop" [src]="featured.imageUrl" alt="" (error)="onThumbnailError($event)">
         <div class="featured-copy">
           <span class="featured-category">{{ featured.category }}</span>
@@ -46,23 +41,43 @@
         <img class="featured-cover" [src]="featured.imageUrl" alt="" (error)="onThumbnailError($event)">
       </section>
 
-      <section *ngIf="continueWatching.length && !query.trim() && !selectedCategory"
-               class="continue-watching" aria-labelledby="continue-watching-title">
-        <div class="results-heading">
-          <h2 id="continue-watching-title">Continuar viendo</h2>
+      <section class="activity-shelf" *ngIf="(continueWatching.length || recentTitles.length) && !selectedCategory"
+               aria-label="Actividad de la Biblioteca">
+        <div class="shelf-head">
+          <div *ngIf="continueWatching.length && recentTitles.length; else shelfHeading" class="shelf-selector" role="group" aria-label="Contenido de la fila">
+            <button type="button" [attr.aria-pressed]="activeShelf === 'continue'" (click)="shelfChoice = 'continue'">Continuar viendo</button>
+            <button type="button" [attr.aria-pressed]="activeShelf === 'recent'" (click)="shelfChoice = 'recent'">Recién añadidos</button>
+          </div>
+          <ng-template #shelfHeading><h2>{{ activeShelf === 'recent' ? 'Recién añadidos' : 'Continuar viendo' }}</h2></ng-template>
         </div>
-        <div class="continue-list">
-          <a *ngFor="let entry of continueWatching" class="continue-card"
+
+        <div class="continue-list" *ngIf="activeShelf === 'continue'; else recentShelf">
+          <a *ngFor="let entry of continueWatching" class="continue-card" [attr.title]="entry.title"
              [routerLink]="entry.playUrl" [queryParams]="{ episode: entry.path }">
             <img [src]="entry.imageUrl" alt="" loading="lazy" decoding="async" (error)="onThumbnailError($event)">
             <span class="continue-copy">
               <strong>{{ entry.title }}</strong>
               <small *ngIf="entry.episode !== entry.title">{{ entry.episode }}</small>
-              <progress [value]="entry.percent" max="100" aria-label="Progreso de reproducción"></progress>
-              <small><i class="pi pi-play" aria-hidden="true"></i> Retomar en {{ entry.time }}</small>
+              <span class="continue-progress">
+                <progress [value]="entry.percent" max="100" aria-label="Progreso de reproducción"></progress>
+                <small>{{ entry.time }}</small>
+              </span>
             </span>
           </a>
         </div>
+        <ng-template #recentShelf>
+          <div class="continue-list">
+            <a class="continue-card" *ngFor="let item of recentTitles" [attr.title]="item.title.title"
+               [routerLink]="item.link.url" [queryParams]="item.link.params">
+              <img [src]="item.title.imageUrl" alt="" loading="lazy" decoding="async" (error)="onThumbnailError($event)">
+              <span class="continue-copy">
+                <strong>{{ item.title.title }}</strong>
+                <small>{{ item.name || item.title.category }}</small>
+                <small class="recent-date">{{ item.date | date:'dd/MM/yyyy' }}</small>
+              </span>
+            </a>
+          </div>
+        </ng-template>
       </section>
 
       <section *ngIf="featured; else emptyLibrary" class="catalog-results" aria-labelledby="catalog-results-title">
@@ -87,7 +102,7 @@
       <ng-template #noResults>
         <div class="catalog-state">
           <p>No hay títulos que coincidan con los filtros.</p>
-          <button type="button" class="quiet-button" (click)="resetFilters()">Limpiar filtros</button>
+          <button type="button" class="quiet-button" (click)="setCategory('')">Ver todas las categorías</button>
         </div>
       </ng-template>
     </ng-container>

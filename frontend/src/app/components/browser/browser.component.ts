@@ -1,4 +1,5 @@
-import { ActivatedRoute } from '@angular/router';
+import { videoFiles, videoLink } from 'src/app/interfaces/catalog-navigation';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { interval, Subscription } from 'rxjs';
 import { AnimeMatch, Video, WatchProgress } from 'src/app/interfaces/video.interface';
@@ -10,7 +11,6 @@ import { environments } from 'src/environments/environments';
 interface CatalogTitle {
   category: string;
   title: string;
-  searchKey: string;
   imageUrl: string;
   playUrl: string[];
 }
@@ -42,7 +42,16 @@ export class BrowserComponent implements OnInit, OnDestroy {
   @ViewChild('featuredSection') private featuredSection?: ElementRef<HTMLElement>;
   @ViewChild('titleDialog', { static: true }) private titleDialog!: ElementRef<HTMLDialogElement>;
 
+  shelfChoice?: 'continue' | 'recent';
+
+  get activeShelf(): 'continue' | 'recent' {
+    if (!this.continueWatching.length) return 'recent';
+    if (!this.recentTitles.length) return 'continue';
+    return this.shelfChoice || 'continue';
+  }
+
   continueWatching: ContinueWatching[] = [];
+  recentTitles: { title: CatalogTitle; link: ReturnType<typeof videoLink>; name: string; date: number }[] = [];
   categories: string[] = [];
   visibleTitles: CatalogTitle[] = [];
   featured?: CatalogTitle;
@@ -51,7 +60,6 @@ export class BrowserComponent implements OnInit, OnDestroy {
   selectedTitle?: CatalogTitle;
   selectedInfo?: TitleInfo;
   selectedCategory = '';
-  query = '';
   isLoading = true;
   isError = false;
   loadingDetails = false;
@@ -73,20 +81,23 @@ export class BrowserComponent implements OnInit, OnDestroy {
 
   private titles: CatalogTitle[] = [];
   private catalogRequest?: Subscription;
+  private categoryRequest?: Subscription;
   private progressRequest?: Subscription;
   private featuredRequest?: Subscription;
   private featuredTimer?: Subscription;
   private featuredQueue: CatalogTitle[] = [];
   private detailRequest?: Subscription;
 
-  constructor(private videoService: VideoService, private changeDetector: ChangeDetectorRef, private progress: WatchProgressService, private login: LoginService, private route: ActivatedRoute) {}
+  constructor(private videoService: VideoService, private changeDetector: ChangeDetectorRef, private progress: WatchProgressService, private login: LoginService, private route: ActivatedRoute, private router: Router) {}
 
   ngOnInit(): void {
     this.canEdit = this.login.isAdmin();
+    this.categoryRequest = this.route.queryParamMap.subscribe(params => this.applyCategory(params.get('category')));
     this.loadCatalog();
   }
 
   ngOnDestroy(): void {
+    this.categoryRequest?.unsubscribe();
     this.cancelEdit();
     this.catalogRequest?.unsubscribe();
     this.progressRequest?.unsubscribe();
@@ -106,6 +117,14 @@ export class BrowserComponent implements OnInit, OnDestroy {
     this.catalogRequest = this.videoService.getVideos().subscribe({
       next: videos => {
         this.titles = this.buildCatalog(videos);
+        this.recentTitles = this.titles.flatMap(title => {
+          const files = videoFiles(videos[title.category][title.title]);
+          const latest = files.reduce((best, file) => (file.addedAt || 0) > (best.addedAt || 0) ? file : best, files[0]);
+          return latest?.addedAt ? [{
+            title, link: videoLink(title.category, title.title, latest),
+            name: files.length > 1 ? latest.name : '', date: latest.addedAt
+          }] : [];
+        }).sort((a, b) => b.date - a.date).slice(0, 12);
         this.progressRequest = this.progress.list().subscribe({
           next: progress => { this.continueWatching = this.buildContinueWatching(videos, progress); },
           error: () => {}
@@ -113,7 +132,7 @@ export class BrowserComponent implements OnInit, OnDestroy {
         this.categories = Array.from(new Set(this.titles.map(entry => entry.category)));
         this.featuredQueue = [];
         this.featuredInfo = undefined;
-        this.applyFilters();
+        this.applyCategory(this.route.snapshot.queryParamMap.get('category'));
         this.isLoading = false;
         this.openReviewEntry();
         this.advanceFeatured();
@@ -168,7 +187,7 @@ export class BrowserComponent implements OnInit, OnDestroy {
     this.featuredTimer?.unsubscribe();
     if (!this.canRotateFeatured || this.featuredPaused) return;
     this.featuredTimer = interval(15_000).subscribe(() => {
-      if (document.hidden || this.selectedTitle || this.selectedCategory || this.query.trim()) return;
+      if (document.hidden || this.selectedTitle || this.selectedCategory) return;
       if (this.featuredSection?.nativeElement.matches(':hover, :focus-within')) return;
       this.advanceFeatured();
     });
@@ -188,19 +207,14 @@ export class BrowserComponent implements OnInit, OnDestroy {
   }
 
   setCategory(category: string): void {
-    this.selectedCategory = category;
-    this.applyFilters();
+    void this.router.navigate([], {
+      relativeTo: this.route, queryParams: { category: category || null }, queryParamsHandling: 'merge', replaceUrl: true
+    });
   }
 
-  setQuery(query: string): void {
-    this.query = query;
-    this.applyFilters();
-  }
-
-  resetFilters(): void {
-    this.query = '';
-    this.selectedCategory = '';
-    this.applyFilters();
+  private applyCategory(category: string | null): void {
+    this.selectedCategory = category && this.categories.includes(category) ? category : '';
+    this.visibleTitles = this.titles.filter(entry => !this.selectedCategory || entry.category === this.selectedCategory);
   }
 
   openTitle(entry: CatalogTitle): void {
@@ -359,13 +373,6 @@ export class BrowserComponent implements OnInit, OnDestroy {
     return entry;
   }
 
-  private applyFilters(): void {
-    const search = this.normalize(this.query.trim());
-    this.visibleTitles = this.titles.filter(entry =>
-      (!this.selectedCategory || entry.category === this.selectedCategory) && entry.searchKey.includes(search)
-    );
-  }
-
   private buildCatalog(catalog: Video): CatalogTitle[] {
     return Object.entries(catalog).flatMap(([category, entries]) =>
       Object.entries(entries).map(([title, entry]) => {
@@ -373,7 +380,6 @@ export class BrowserComponent implements OnInit, OnDestroy {
         return {
           category,
           title,
-          searchKey: this.normalize(title),
           imageUrl: environments.baseURL + '/api/video/thumbnail?' + thumbnailParams,
           playUrl: ['/videos', category, title, this.findFirstVideo(entry)]
         };

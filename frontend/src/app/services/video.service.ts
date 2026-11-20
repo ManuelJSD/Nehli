@@ -5,6 +5,12 @@ import { map, Observable, tap } from 'rxjs';
 import { AnimeMatch, CatalogEdit, Video, VideoMetadata } from '../interfaces/video.interface';
 import { environments } from 'src/environments/environments';
 
+export interface PlaybackDiagnostic {
+  mode: 'direct' | 'transcode' | 'remux' | 'segment';
+  counters: Partial<Record<'hit' | 'generated' | 'shared', number>>;
+  milliseconds: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -22,6 +28,10 @@ export class VideoService {
       map(response => response[subfolder][titulo]),
       // tap(seriesData => console.log('Contenido de videos:', seriesData.videos)),
     );
+  }
+
+  getPlaybackDiagnostic(diagnostic: string) {
+    return this.http.get<PlaybackDiagnostic | null>(this.apiUrl + '/api/stream/diagnostic', { params: { diagnostic } });
   }
 
   getVideoMetadata(path: string): Observable<VideoMetadata> {

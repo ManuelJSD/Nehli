@@ -39,20 +39,29 @@ async function write(file, bytes) {
     }
 }
 
-async function load(key, res, generate) {
+async function load(key, res, generate, observe = () => {}) {
     const name = createHash('sha256').update('hls-v1:' + key).digest('hex') + '.ts';
     const file = path.join(directory, name);
     const cached = await fs.readFile(file).catch(() => undefined);
-    if (cached?.length || res.destroyed) return cached;
+    if (cached?.length) {
+        observe('hit');
+        return cached;
+    }
+    if (res.destroyed) return;
 
     let job = pending.get(key);
+    if (job) observe('shared');
     if (!job) {
         const controller = new AbortController();
         job = { controller, readers: 0 };
         const current = job;
         job.output = Promise.resolve().then(async () => {
             const saved = await fs.readFile(file).catch(() => undefined);
-            if (saved?.length) return saved;
+            if (saved?.length) {
+                observe('hit');
+                return saved;
+            }
+            observe('generated');
             controller.signal.throwIfAborted();
             const bytes = await generate(controller.signal);
             await write(file, bytes);

@@ -1,0 +1,21 @@
+<h1>Buscar en Nehli</h1>
+<label for="search-query">Películas, series, episodios y música</label>
+<input id="search-query" type="search" [ngModel]="query" (ngModelChange)="filter($event)">
+<div *ngIf="libraryCategory" class="search-scope" role="group" aria-label="Dónde buscar">
+  <button type="button" [attr.aria-pressed]="!!activeCategory" (click)="setScope(libraryCategory)">{{ libraryCategory }}</button>
+  <button type="button" [attr.aria-pressed]="!activeCategory" (click)="setScope('')">Todo Nehli</button>
+</div>
+<p *ngIf="loading" role="status">Cargando la biblioteca…</p>
+<p *ngIf="incomplete">Parte de la colección aún no está disponible en la búsqueda.</p>
+<p *ngIf="!loading && query.trim() && !matches.length">No hay resultados.</p>
+<ul *ngIf="matches.length">
+  <li *ngFor="let item of matches">
+    <a [routerLink]="item.url" [queryParams]="item.params">
+      <span class="result-art" [class.music-art]="item.music" aria-hidden="true">
+        <i class="pi" [ngClass]="item.music ? 'pi-volume-up' : 'pi-video'"></i>
+        <img *ngIf="item.artwork" [src]="item.artwork" alt="" loading="lazy" decoding="async" (error)="item.artwork = undefined">
+      </span>
+      <span class="result-copy"><strong>{{ item.title }}</strong><small>{{ item.detail }}</small></span>
+    </a>
+  </li>
+</ul>

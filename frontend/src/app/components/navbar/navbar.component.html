@@ -3,6 +3,9 @@
     <a routerLink="/browser" aria-label="Nehli · Biblioteca"><img src="assets/images/logo.webp" alt="Nehli" class="navbar-logo"></a>
   </ng-template>
   <ng-template pTemplate="end">
+    <a routerLink="/buscar" [queryParams]="searchParams" class="global-search" aria-label="Buscar en Nehli" title="Buscar en Nehli">
+      <i class="pi pi-search" aria-hidden="true"></i>
+    </a>
     <details #accountMenu class="account-menu" (keydown.escape)="closeMenuWithKeyboard($event)">
       <summary [title]="username">
         <i class="pi pi-user" aria-hidden="true"></i>

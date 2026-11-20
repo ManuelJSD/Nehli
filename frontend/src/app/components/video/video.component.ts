@@ -1,3 +1,4 @@
+import { LoginService } from 'src/app/services/login.service';
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { TreeNode } from 'primeng/api';
@@ -6,7 +7,7 @@ import videojs from 'video.js';
 import { VideoMetadata, VideoTrack } from 'src/app/interfaces/video.interface';
 import { findPreferredTrack, trackPreference, TrackPreferences } from 'src/app/interfaces/track-preferences';
 import { TrackPreferencesService } from 'src/app/services/track-preferences.service';
-import { VideoService } from 'src/app/services/video.service';
+import { PlaybackDiagnostic, VideoService } from 'src/app/services/video.service';
 import { WatchProgressService } from 'src/app/services/watch-progress.service';
 import { environments } from 'src/environments/environments';
 
@@ -103,13 +104,20 @@ export class VideoComponent implements OnInit, OnDestroy {
   private catalogRequest?: Subscription;
   private metadataRequest?: Subscription;
   private removeSubtitle?: () => void;
+  diagnostic?: PlaybackDiagnostic | null;
+  diagnosticOpen = false;
+  startupMs?: number;
+  diagnosticError = false;
+  private diagnosticId?: string;
+  private diagnosticStarted = 0;
+  private diagnosticRequest?: Subscription;
   private loadedSubtitleIndex?: number;
   private subtitleRequest?: AbortController;
   private subtitleUrl?: string;
   private pendingPlayback?: { time: number; paused: boolean };
   private onSourceReady?: () => void;
 
-  constructor(private route: ActivatedRoute, private videoService: VideoService, private progress: WatchProgressService, private trackPreferences: TrackPreferencesService) {
+  constructor(private route: ActivatedRoute, private videoService: VideoService, private progress: WatchProgressService, private trackPreferences: TrackPreferencesService, private login: LoginService) {
     this.category = this.route.snapshot.params['category'];
     this.subcategory = this.route.snapshot.params['subcategory'];
     this.video = this.route.snapshot.params['video'];
@@ -140,6 +148,7 @@ export class VideoComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.diagnosticRequest?.unsubscribe();
     this.saveProgress();
     this.catalogRequest?.unsubscribe();
     this.metadataRequest?.unsubscribe();
@@ -324,6 +333,31 @@ export class VideoComponent implements OnInit, OnDestroy {
     return this.subtitles.find(track => track.index === this.currentSubtitleIndex);
   }
 
+  get isAdmin(): boolean { return this.login.isAdmin(); }
+
+  get diagnosticMode(): string {
+    if (!this.diagnostic) return 'Esperando datos del servidor…';
+    if (this.diagnostic.mode === 'direct') return 'Reproducción directa';
+    if (this.diagnostic.mode === 'remux') return 'Cambio de contenedor sin recodificar el vídeo';
+    if (this.diagnostic.mode === 'transcode') return 'Conversión con FFmpeg';
+    return this.diagnostic.counters.hit ? 'Segmentos en caché' : 'Segmento compartido';
+  }
+
+  toggleDiagnostic(): void {
+    this.diagnosticOpen = !this.diagnosticOpen;
+    if (this.diagnosticOpen) this.refreshDiagnostic();
+  }
+
+  refreshDiagnostic(): void {
+    if (!this.diagnosticId || !this.isAdmin) return;
+    this.diagnosticRequest?.unsubscribe();
+    this.diagnosticError = false;
+    this.diagnosticRequest = this.videoService.getPlaybackDiagnostic(this.diagnosticId).subscribe({
+      next: data => { this.diagnostic = data; },
+      error: () => { this.diagnosticError = true; }
+    });
+  }
+
   private reloadSource(): void {
     if (!this.player || !this.metadata) return;
     this.loadSource(this.pendingPlayback || { time: this.player.currentTime() ?? 0, paused: this.player.paused() });
@@ -348,6 +382,12 @@ export class VideoComponent implements OnInit, OnDestroy {
         controlBar: playerControls
       });
       this.player.on('error', () => { this.loadingVideo = false; });
+      this.player.on('playing', () => {
+        if (this.diagnosticId && this.startupMs === undefined) {
+          this.startupMs = Math.round(performance.now() - this.diagnosticStarted);
+          if (this.diagnosticOpen) this.refreshDiagnostic();
+        }
+      });
       this.player.on('pause', () => this.saveProgress());
       this.player.on('ended', () => this.saveProgress());
       this.player.on('seeked', () => this.saveProgress());
@@ -374,6 +414,16 @@ export class VideoComponent implements OnInit, OnDestroy {
       if (!playback.paused) player.play()?.catch(() => {});
     };
     player.one('loadedmetadata', this.onSourceReady);
+    this.diagnosticRequest?.unsubscribe();
+    this.diagnostic = undefined;
+    this.diagnosticError = false;
+    this.startupMs = undefined;
+    if (this.isAdmin) {
+      this.diagnosticId = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte =>
+        byte.toString(16).padStart(2, '0')).join('');
+      query.set('diagnostic', this.diagnosticId);
+      this.diagnosticStarted = performance.now();
+    }
     const source = {
       src: this.streamUrl(useHls ? 'playlist' : 'play', query),
       type: useHls ? 'application/x-mpegURL' : 'video/mp4',

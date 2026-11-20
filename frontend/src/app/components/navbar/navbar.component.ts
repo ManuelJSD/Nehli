@@ -27,6 +27,15 @@ export class NavbarComponent implements OnDestroy {
   private profileRequest?: Subscription;
   private musicRequest?: Subscription;
 
+  get searchParams(): { category: string } | undefined {
+    const url = this.router.parseUrl(this.router.url);
+    const category = url.queryParams['category'];
+    if (url.root.children['primary']?.segments[0]?.path === 'browser' && typeof category === 'string' && category) {
+      return { category };
+    }
+    return undefined;
+  }
+
   get canAdminister(): boolean {
     return this.loginService.isAdmin();
   }

@@ -14,6 +14,7 @@ import { PrimeNgModule } from '../prime-ng/prime-ng.module';
 import { SharedModule } from 'primeng/api';
 import { NavbarComponent } from './navbar/navbar.component';
 import { RecoveryComponent } from './recovery/recovery.component';
+import { SearchComponent } from './search/search.component';
 import { MusicComponent } from './music/music.component';
 import { MusicPlayerComponent } from './music/music-player.component';
 import { AdminComponent } from './admin/admin.component';
@@ -29,6 +30,7 @@ import { AdminComponent } from './admin/admin.component';
     NavbarComponent,
     AdminComponent,
     RecoveryComponent,
+    SearchComponent,
     MusicComponent,
     MusicPlayerComponent,
   ],
@@ -50,6 +52,7 @@ import { AdminComponent } from './admin/admin.component';
     NavbarComponent,
     AdminComponent,
     RecoveryComponent,
+    SearchComponent,
     MusicComponent,
     MusicPlayerComponent,
   ]

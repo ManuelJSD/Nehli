@@ -79,7 +79,7 @@
       </section>
       <ol class="track-list">
         <li *ngFor="let track of selected.tracks; let i = index">
-          <button type="button" class="track" (click)="player.play(selected, i)">
+          <button type="button" class="track" (click)="player.play(selected, i)" [class.linked-track]="track.id === linkedTrack">
             <span class="track-number">{{ track.disc > 1 ? track.disc + '.' : '' }}{{ track.number || i + 1 }}</span>
             <span class="track-title"><strong>{{ track.title }}</strong><small>{{ track.artist }}</small></span>
             <time>{{ duration(track.duration) }}</time>

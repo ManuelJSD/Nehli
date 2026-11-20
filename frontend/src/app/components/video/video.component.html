@@ -33,6 +33,21 @@
           </div>
         </div>
 
+        <section *ngIf="isAdmin" class="playback-diagnostic">
+          <button class="diagnostic-button" type="button" (click)="toggleDiagnostic()" [attr.aria-expanded]="diagnosticOpen">
+            <i class="pi pi-chart-bar" aria-hidden="true"></i> Diagnóstico
+          </button>
+          <div *ngIf="diagnosticOpen" class="diagnostic-details">
+            <strong>{{ diagnosticMode }}</strong>
+            <span *ngIf="startupMs !== undefined">Inicio de reproducción: {{ startupMs }} ms</span>
+            <span *ngIf="diagnostic as data">
+              Segmentos en caché: {{ data.counters.hit || 0 }} · Generados: {{ data.counters.generated || 0 }} · Compartidos: {{ data.counters.shared || 0 }}
+            </span>
+            <span *ngIf="diagnosticError" role="alert">No se pudo consultar el diagnóstico.</span>
+            <button class="diagnostic-button" type="button" (click)="refreshDiagnostic()">Actualizar</button>
+          </div>
+        </section>
+
         <div class="episode-actions" *ngIf="nextEpisode">
           <button type="button" (click)="playNextEpisode()" [attr.title]="nextEpisode.label">
             Siguiente episodio <i class="pi pi-step-forward" aria-hidden="true"></i>

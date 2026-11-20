@@ -1,6 +1,7 @@
 const { spawn } = require('node:child_process');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const diagnostics = require('../utils/playbackDiagnostics');
 const segmentCache = require('../utils/segmentCache');
 const { canAccessCategory } = require('../utils/accessPolicy');
 
@@ -407,6 +408,7 @@ const getPlaylist = mediaHandler(async (req, res, file, media) => {
         '#EXT-X-INDEPENDENT-SEGMENTS'
     ];
     const query = new URLSearchParams({ path: req.query.path });
+    if (req.user?.role === 'admin' && /^[a-f0-9]{32}$/.test(req.query.diagnostic || '')) query.set('diagnostic', req.query.diagnostic);
     for (const key of ['audio', 'subtitle']) {
         if (req.query[key] !== undefined) query.set(key, req.query[key]);
     }
@@ -440,10 +442,16 @@ const getSegment = mediaHandler(async (req, res, file, media) => {
 
     const { start, duration } = cut;
     const key = JSON.stringify([file.filename, file.version, tracks.audio?.index, tracks.subtitle?.index, start, duration, req.query.remux !== undefined]);
+    const started = performance.now();
+    let mode;
+    let cache;
     const output = await segmentCache.load(key, res, async signal => {
+        mode = 'transcode';
         if (req.query.remux !== undefined) {
             try {
-                return await remuxSegment(file, media, tracks, start, duration, signal);
+                const bytes = await remuxSegment(file, media, tracks, start, duration, signal);
+                mode = 'remux';
+                return bytes;
             } catch {
                 signal.throwIfAborted();
                 // The source may have an incompatible stream or an unusable seek index.
@@ -452,17 +460,22 @@ const getSegment = mediaHandler(async (req, res, file, media) => {
         const inputStart = await bitmapInputStart(file, media, tracks.subtitle, start);
         const args = transcodeArgs(file.filename, media.video, tracks, inputStart, start, duration);
         return runMediaTool('ffmpeg', args.concat('-f', 'mpegts', 'pipe:1'), { timeout: 90000, signal });
-    });
-    if (!res.destroyed) res.type('video/mp2t').send(output);
+    }, result => { cache = result; });
+    if (!res.destroyed) {
+        diagnostics.record(req, mode || 'segment', started, cache);
+        res.type('video/mp2t').send(output);
+    }
 });
 
 const streamVideo = mediaHandler(async (req, res, file, media, next) => {
+    const started = performance.now();
     const start = req.query.start === undefined ? 0 : Number(req.query.start);
     if (Array.isArray(req.query.start) || !Number.isFinite(start) || start < 0) {
         throw httpError(400, 'Tiempo de inicio no válido');
     }
     const tracks = pickTracks(media, req.query);
     if (media.directPlay && start === 0 && !tracks.subtitle) {
+        diagnostics.record(req, 'direct', started);
         res.type('video/mp4').sendFile(file.filename, error => {
             if (error && !res.destroyed) next(error);
         });
@@ -471,6 +484,7 @@ const streamVideo = mediaHandler(async (req, res, file, media, next) => {
 
     const inputStart = await bitmapInputStart(file, media, tracks.subtitle, start);
     const args = transcodeArgs(file.filename, media.video, tracks, inputStart, start);
+    diagnostics.record(req, 'transcode', started);
     res.type('video/mp4');
     await runMediaTool('ffmpeg', args.concat('-movflags', 'frag_keyframe+empty_moov+default_base_moof',
         '-f', 'mp4', 'pipe:1'), { res, passthrough: true });

@@ -72,9 +72,11 @@ async function isVideo(filePath, scan) {
   return isVideo;
 }
 
-function videoEntry(name, filePath) {
+async function videoEntry(name, filePath) {
+  const stat = await fsp.stat(filePath).catch(() => undefined);
   return {
     name,
+    addedAt: stat && (stat.birthtimeMs > 0 ? stat.birthtimeMs : stat.mtimeMs),
     relPath: Buffer.from(path.relative(videoFolder, filePath)).toString('base64')
   };
 }
@@ -104,7 +106,7 @@ async function scanDirectory(dirPath, scan) {
         if (THUMBNAIL_EXTENSIONS.has(path.extname(item.name).toLowerCase())) {
           result.thumbnails.push(item.name);
         } else if (await isVideo(itemPath, scan)) {
-          result.videos.push(videoEntry(item.name, itemPath));
+          result.videos.push(await videoEntry(item.name, itemPath));
         }
       }
     }
@@ -151,7 +153,7 @@ async function generateVideoCatalog() {
         } else if (entry.isFile() && await isVideo(entryPath, scan)) {
           const titleName = path.parse(entry.name).name;
           const title = titles[titleName] ??= { folders: {}, videos: [], thumbnails: [] };
-          title.videos.push(videoEntry(entry.name, entryPath));
+          title.videos.push(await videoEntry(entry.name, entryPath));
         }
       }
       if (Object.keys(titles).length) catalog[categoryName] = titles;

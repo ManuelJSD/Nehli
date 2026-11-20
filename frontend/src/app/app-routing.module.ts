@@ -13,6 +13,7 @@ import { PopularesComponent } from './components/myanime/pages/populares/popular
 import { TemporadaComponent } from './components/myanime/pages/temporada/temporada.component';
 import { VideoComponent } from './components/video/video.component';
 import { RecoveryComponent } from './components/recovery/recovery.component';
+import { SearchComponent } from './components/search/search.component';
 import { MusicComponent } from './components/music/music.component';
 import { AdminComponent } from './components/admin/admin.component';
 import { AdminGuard } from './guards/admin.guard';
@@ -64,6 +65,11 @@ const routes: Routes = [
   {
     path: 'videos/:category/:subcategory/:video',
     component: VideoComponent,
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'buscar',
+    component: SearchComponent,
     canActivate: [AuthGuard]
   },
   {

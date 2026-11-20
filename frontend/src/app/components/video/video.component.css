@@ -638,3 +638,7 @@
 .episode-actions button:hover {
   background: #334155;
 }
+
+.playback-diagnostic { margin-top: .65rem; }
+.diagnostic-details { display: grid; gap: .35rem; padding: .65rem; background: #172337; color: #dce9ff; }
+.diagnostic-button { justify-self: start; color: inherit; background: #243652; border: 1px solid #405270; border-radius: .45rem; padding: .45rem .65rem; cursor: pointer; }

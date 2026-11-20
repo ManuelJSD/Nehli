@@ -118,6 +118,7 @@ const { notePlayback } = require('../utils/metadataCache');
  *         '200':
  *           description: Duración en segundos
  */
+router.get('/diagnostic', require('../middleware/rol')(['admin']), require('../utils/playbackDiagnostics').read);
 router.get('/play', notePlayback, stream.streamVideo);
 router.get('/playlist', stream.getPlaylist);
 router.get('/segment', notePlayback, stream.getSegment);

@@ -1,3 +1,4 @@
+import { ActivatedRoute } from '@angular/router';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { exhaustMap, Subscription, takeWhile, timer } from 'rxjs';
 import { MusicAlbum, MusicService, MusicTrack } from '../../services/music.service';
@@ -23,6 +24,7 @@ export class MusicComponent implements OnInit, OnDestroy {
   trackResults: { album: MusicAlbum; track: MusicTrack; index: number }[] = [];
   trackLimit = 20;
   album?: MusicAlbum;
+  linkedTrack?: string;
   search = '';
   artist = '';
   view: 'albums' | 'folders' = 'albums';
@@ -36,7 +38,7 @@ export class MusicComponent implements OnInit, OnDestroy {
   queueStatus = '';
   private request?: Subscription;
 
-  constructor(public music: MusicService, public player: MusicPlayerService) {}
+  constructor(public music: MusicService, public player: MusicPlayerService, private route: ActivatedRoute) {}
 
   ngOnInit(): void { this.load(); }
   ngOnDestroy(): void { this.request?.unsubscribe(); }
@@ -58,6 +60,10 @@ export class MusicComponent implements OnInit, OnDestroy {
           tracks: album.tracks.map(track => ({ ...track, artworkId: album.hasArtwork ? album.id : undefined }))
         }));
         this.buildFolders();
+        const params = this.route.snapshot.queryParamMap;
+        const albumId = params.get('album');
+        if (albumId) this.album = this.albums.find(album => album.id === albumId);
+        this.linkedTrack = params.get('track') || undefined;
         this.artists = Array.from(new Set(this.albums.map(album => album.artist)));
         this.filter();
       },
