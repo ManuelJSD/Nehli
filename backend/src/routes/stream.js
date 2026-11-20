@@ -2,6 +2,11 @@ const express = require('express');
 const stream = require('../controllers/stream');
 
 const router = express.Router();
+const { mediaSession } = require('../middleware/session');
+router.use(mediaSession, (req, res, next) => {
+    res.set('Cache-Control', 'private, no-store');
+    next();
+});
 const { notePlayback } = require('../utils/metadataCache');
 
 /**

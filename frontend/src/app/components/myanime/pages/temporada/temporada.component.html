@@ -18,7 +18,7 @@
     </div>
     <p *ngIf="isLoading" role="status" class="anime-status">Cargando anime…</p>
     <div *ngIf="isError" role="alert" class="anime-status">
-      <span>No se pudo cargar el listado.</span>
+      <span>{{ rateLimited ? 'AniList ha limitado temporalmente las consultas. Espera un momento y vuelve a intentarlo.' : 'No se pudo cargar el listado.' }}</span>
       <button type="button" (click)="load()">Reintentar</button>
     </div>
     <ng-container *ngIf="!isLoading && !isError">

@@ -18,6 +18,7 @@ export class TemporadaComponent implements OnInit, OnDestroy {
   ];
   isLoading = true;
   isError = false;
+  rateLimited = false;
   private request?: Subscription;
 
   constructor(private animeService: MyanimeService) {}
@@ -37,7 +38,7 @@ export class TemporadaComponent implements OnInit, OnDestroy {
     this.isError = false;
     this.request = this.animeService.obtenerSeason(this.selectedSeason, this.anioSeleccionado).subscribe({
       next: data => { this.Temporadas = data; this.isLoading = false; },
-      error: () => { this.isError = true; this.isLoading = false; }
+      error: error => { this.rateLimited = error.status === 429; this.isError = true; this.isLoading = false; }
     });
   }
 }

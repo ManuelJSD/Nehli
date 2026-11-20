@@ -35,9 +35,9 @@ export class LoginComponent {
         }
         this.isLoading = false;
       },
-      error: () => {
+      error: response => {
         this.loginError = true;
-        this.errorMessage = 'Error en la solicitud al servidor. Inténtalo de nuevo.';
+        this.errorMessage = response.error?.error || 'Error en la solicitud al servidor. Inténtalo de nuevo.';
         this.isLoading = false;
       }
     });

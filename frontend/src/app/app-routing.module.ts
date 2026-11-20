@@ -12,6 +12,7 @@ import { GenerosComponent } from './components/myanime/pages/generos/generos.com
 import { PopularesComponent } from './components/myanime/pages/populares/populares.component';
 import { TemporadaComponent } from './components/myanime/pages/temporada/temporada.component';
 import { VideoComponent } from './components/video/video.component';
+import { RecoveryComponent } from './components/recovery/recovery.component';
 import { AdminComponent } from './components/admin/admin.component';
 import { AdminGuard } from './guards/admin.guard';
 
@@ -35,6 +36,14 @@ const routes: Routes = [
     path: 'register',
     component: RegisterComponent,
     canActivate: [NoAuthGuard]
+  },
+  {
+    path: 'recuperar',
+    component: RecoveryComponent
+  },
+  {
+    path: 'restablecer',
+    component: RecoveryComponent
   },
   {
     path: 'generos',

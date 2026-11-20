@@ -1,5 +1,6 @@
+import { ActivatedRoute } from '@angular/router';
 import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { interval, Subscription } from 'rxjs';
 import { AnimeMatch, Video, WatchProgress } from 'src/app/interfaces/video.interface';
 import { LoginService } from 'src/app/services/login.service';
 import { VideoService } from 'src/app/services/video.service';
@@ -38,6 +39,7 @@ interface TitleInfo {
   styleUrls: ['./browser.component.css']
 })
 export class BrowserComponent implements OnInit, OnDestroy {
+  @ViewChild('featuredSection') private featuredSection?: ElementRef<HTMLElement>;
   @ViewChild('titleDialog', { static: true }) private titleDialog!: ElementRef<HTMLDialogElement>;
 
   continueWatching: ContinueWatching[] = [];
@@ -45,6 +47,7 @@ export class BrowserComponent implements OnInit, OnDestroy {
   visibleTitles: CatalogTitle[] = [];
   featured?: CatalogTitle;
   featuredInfo?: TitleInfo;
+  featuredPaused = false;
   selectedTitle?: CatalogTitle;
   selectedInfo?: TitleInfo;
   selectedCategory = '';
@@ -53,6 +56,7 @@ export class BrowserComponent implements OnInit, OnDestroy {
   isError = false;
   loadingDetails = false;
   canEdit = false;
+  fromReview = false;
   editing = false;
   editorBusy = false;
   searchingAnime = false;
@@ -71,9 +75,11 @@ export class BrowserComponent implements OnInit, OnDestroy {
   private catalogRequest?: Subscription;
   private progressRequest?: Subscription;
   private featuredRequest?: Subscription;
+  private featuredTimer?: Subscription;
+  private featuredQueue: CatalogTitle[] = [];
   private detailRequest?: Subscription;
 
-  constructor(private videoService: VideoService, private changeDetector: ChangeDetectorRef, private progress: WatchProgressService, private login: LoginService) {}
+  constructor(private videoService: VideoService, private changeDetector: ChangeDetectorRef, private progress: WatchProgressService, private login: LoginService, private route: ActivatedRoute) {}
 
   ngOnInit(): void {
     this.canEdit = this.login.isAdmin();
@@ -85,6 +91,7 @@ export class BrowserComponent implements OnInit, OnDestroy {
     this.catalogRequest?.unsubscribe();
     this.progressRequest?.unsubscribe();
     this.featuredRequest?.unsubscribe();
+    this.featuredTimer?.unsubscribe();
     this.detailRequest?.unsubscribe();
   }
 
@@ -92,6 +99,7 @@ export class BrowserComponent implements OnInit, OnDestroy {
     this.catalogRequest?.unsubscribe();
     this.progressRequest?.unsubscribe();
     this.featuredRequest?.unsubscribe();
+    this.featuredTimer?.unsubscribe();
     this.continueWatching = [];
     this.isLoading = true;
     this.isError = false;
@@ -103,23 +111,80 @@ export class BrowserComponent implements OnInit, OnDestroy {
           error: () => {}
         });
         this.categories = Array.from(new Set(this.titles.map(entry => entry.category)));
-        this.featured = this.titles[0];
+        this.featuredQueue = [];
         this.featuredInfo = undefined;
         this.applyFilters();
         this.isLoading = false;
-        if (this.featured) {
-          const { category, title } = this.featured;
-          this.featuredRequest = this.videoService.getVideoInfo(category, title).subscribe({
-            next: info => { this.featuredInfo = info; },
-            error: () => {}
-          });
-        }
+        this.openReviewEntry();
+        this.advanceFeatured();
+        this.scheduleFeatured();
       },
       error: () => {
         this.isLoading = false;
         this.isError = true;
       }
     });
+  }
+
+  get canRotateFeatured(): boolean {
+    return this.titles.length > 1;
+  }
+
+  advanceFeatured(): void {
+    if (!this.featuredQueue.length) {
+      this.featuredQueue = [...this.titles];
+      for (let index = this.featuredQueue.length - 1; index > 0; index--) {
+        const random = Math.floor(Math.random() * (index + 1));
+        [this.featuredQueue[index], this.featuredQueue[random]] = [this.featuredQueue[random], this.featuredQueue[index]];
+      }
+      const last = this.featuredQueue.length - 1;
+      if (last > 0 && this.featuredQueue[last] === this.featured) {
+        [this.featuredQueue[0], this.featuredQueue[last]] = [this.featuredQueue[last], this.featuredQueue[0]];
+      }
+    }
+
+    this.featured = this.featuredQueue.pop();
+    this.featuredInfo = undefined;
+    this.featuredRequest?.unsubscribe();
+    if (!this.featured) return;
+    const { category, title } = this.featured;
+    this.featuredRequest = this.videoService.getVideoInfo(category, title).subscribe({
+      next: info => { this.featuredInfo = info; },
+      error: () => {}
+    });
+  }
+
+  nextFeatured(): void {
+    this.advanceFeatured();
+    this.scheduleFeatured();
+  }
+
+  toggleFeaturedPause(): void {
+    this.featuredPaused = !this.featuredPaused;
+    this.scheduleFeatured();
+  }
+
+  private scheduleFeatured(): void {
+    this.featuredTimer?.unsubscribe();
+    if (!this.canRotateFeatured || this.featuredPaused) return;
+    this.featuredTimer = interval(15_000).subscribe(() => {
+      if (document.hidden || this.selectedTitle || this.selectedCategory || this.query.trim()) return;
+      if (this.featuredSection?.nativeElement.matches(':hover, :focus-within')) return;
+      this.advanceFeatured();
+    });
+  }
+
+  private openReviewEntry(): void {
+    if (!this.canEdit) return;
+    const query = this.route.snapshot.queryParamMap;
+    const category = query.get('reviewCategory');
+    const title = query.get('reviewTitle');
+    if (!category || !title) return;
+    const entry = this.titles.find(item => item.category === category && item.title === title);
+    if (!entry) return;
+    this.fromReview = true;
+    this.openTitle(entry);
+    this.startEdit();
   }
 
   setCategory(category: string): void {

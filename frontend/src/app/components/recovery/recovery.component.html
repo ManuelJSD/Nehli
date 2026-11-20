@@ -1,0 +1,33 @@
+<div class="auth-page">
+  <header class="auth-header"><a routerLink="/" class="logo-link"><img src="assets/images/logo.webp" alt="Nehli" class="logo"></a></header>
+  <div class="auth-main">
+    <div class="auth-art" aria-hidden="true"></div>
+    <div class="auth-card">
+      <h1 class="auth-title">{{ resetting ? 'Nueva contraseña' : 'Recuperar contraseña' }}</h1>
+      <p *ngIf="message" role="status">{{ message }}</p>
+      <p *ngIf="error" class="error-banner" role="alert">{{ error }}</p>
+      <p *ngIf="resetting && !token">Abre el enlace que recibiste por correo o <a routerLink="/recuperar">solicita otro</a>.</p>
+      <form *ngIf="!message && (!resetting || token)" #form="ngForm" (ngSubmit)="submit()" class="auth-form">
+        <div class="form-group" *ngIf="!resetting">
+          <label for="reset-email" class="form-label">Correo de la cuenta</label>
+          <input id="reset-email" type="email" name="email" autocomplete="email" class="form-input" [(ngModel)]="email" email required>
+        </div>
+        <ng-container *ngIf="resetting">
+          <div class="form-group">
+            <label for="reset-password" class="form-label">Nueva contraseña</label>
+            <input id="reset-password" name="password" type="password" autocomplete="new-password" class="form-input"
+                   [(ngModel)]="password" required minlength="4" maxlength="24">
+          </div>
+          <div class="form-group">
+            <label for="reset-confirm" class="form-label">Confirmar contraseña</label>
+            <input id="reset-confirm" name="confirmation" type="password" autocomplete="new-password" class="form-input"
+                   [(ngModel)]="confirmation" required maxlength="24">
+          </div>
+        </ng-container>
+        <button pButton type="submit" class="btn-submit" [disabled]="form.invalid || busy"
+                [label]="resetting ? 'Guardar contraseña' : 'Enviar enlace'"></button>
+      </form>
+      <div class="auth-footer"><a routerLink="/login" class="footer-link">Volver a iniciar sesión</a></div>
+    </div>
+  </div>
+</div>

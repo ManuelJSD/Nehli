@@ -1,7 +1,10 @@
 <div class="catalog-page">
   <div class="catalog-shell">
     <header class="catalog-header">
-      <h1>Biblioteca</h1>
+      <div>
+        <a *ngIf="fromReview" class="metadata-source" routerLink="/admin" fragment="review">Volver a fichas por revisar</a>
+        <h1>Biblioteca</h1>
+      </div>
       <div class="search-field" *ngIf="!isLoading && !isError && featured">
         <i class="pi pi-search" aria-hidden="true"></i>
         <input type="search" aria-label="Buscar título" placeholder="Buscar título"
@@ -16,7 +19,7 @@
     </div>
 
     <ng-container *ngIf="!isLoading && !isError">
-      <section *ngIf="featured && !query.trim() && !selectedCategory" class="featured" aria-label="Título destacado">
+      <section *ngIf="featured && !query.trim() && !selectedCategory" class="featured" #featuredSection aria-label="Título destacado">
         <img class="featured-backdrop" [src]="featured.imageUrl" alt="" (error)="onThumbnailError($event)">
         <div class="featured-copy">
           <span class="featured-category">{{ featured.category }}</span>
@@ -27,6 +30,17 @@
           <div class="catalog-actions">
             <a class="play-link" [routerLink]="featured.playUrl"><i class="pi pi-play" aria-hidden="true"></i> Reproducir</a>
             <button class="quiet-button" type="button" (click)="openTitle(featured)">Más información</button>
+            <ng-container *ngIf="canRotateFeatured">
+              <button class="quiet-button" type="button" (click)="toggleFeaturedPause()"
+                      [attr.aria-label]="featuredPaused ? 'Reanudar rotación' : 'Pausar rotación'"
+                      [title]="featuredPaused ? 'Reanudar rotación' : 'Pausar rotación'">
+                <i class="pi" [ngClass]="featuredPaused ? 'pi-play' : 'pi-pause'" aria-hidden="true"></i>
+              </button>
+              <button class="quiet-button" type="button" (click)="nextFeatured()"
+                      aria-label="Siguiente destacado" title="Siguiente destacado">
+                <i class="pi pi-chevron-right" aria-hidden="true"></i>
+              </button>
+            </ng-container>
           </div>
         </div>
         <img class="featured-cover" [src]="featured.imageUrl" alt="" (error)="onThumbnailError($event)">

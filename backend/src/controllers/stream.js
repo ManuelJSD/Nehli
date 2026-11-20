@@ -2,6 +2,7 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const segmentCache = require('../utils/segmentCache');
+const { canAccessCategory } = require('../utils/accessPolicy');
 
 const videoFolder = path.resolve(process.env.VIDEO_FOLDER || './videos');
 const segmentLength = 6;
@@ -42,7 +43,9 @@ async function findVideo(encodedPath) {
         if (!isInside(realFolder, realFilename)) throw httpError(403, 'Ruta no permitida');
         const stat = await fs.stat(realFilename);
         if (!stat.isFile()) throw httpError(404, 'Video no encontrado');
-        return { filename: realFilename, version: stat.mtimeMs + ':' + stat.size };
+        const categories = [realFilename, filename].map((value, index) =>
+            path.relative(index === 0 ? realFolder : videoFolder, value).split(path.sep)[0]);
+        return { filename: realFilename, categories, version: stat.mtimeMs + ':' + stat.size };
     } catch (error) {
         if (error.code === 'ENOENT' || error.code === 'ENOTDIR') throw httpError(404, 'Video no encontrado');
         throw error;
@@ -259,6 +262,9 @@ function mediaHandler(handler) {
     return async (req, res, next) => {
         try {
             const file = await findVideo(req.query.path);
+            if (file.categories.some(category => !canAccessCategory(req, category))) {
+                throw httpError(403, 'Tu cuenta no tiene acceso a esta categoría.');
+            }
             const media = await probeVideo(file);
             if (!res.destroyed) await handler(req, res, file, media, next);
         } catch (error) {

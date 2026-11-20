@@ -12,7 +12,10 @@
 
       <h1 class="auth-title">Crear cuenta</h1>
 
-      <form (ngSubmit)="onSubmit()" class="auth-form">
+      <p *ngIf="!invitation">Necesitas una invitación de un administrador para crear una cuenta.</p>
+
+      <p *ngIf="pendingApproval" role="status">Cuenta creada. Podrás iniciar sesión cuando un administrador la apruebe.</p>
+      <form *ngIf="invitation && !pendingApproval" (ngSubmit)="onSubmit()" class="auth-form">
         <div class="form-group">
           <label for="reg-username" class="form-label">
             <i class="pi pi-user" aria-hidden="true"></i>

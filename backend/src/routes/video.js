@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/session');
+const { canAccessCategory, requireCategory, setMediaCookie } = require('../utils/accessPolicy');
 const controller = require('../controllers/video');
 const thumbnailController = require('../controllers/thumbnail');
 
@@ -31,7 +32,10 @@ const thumbnailController = require('../controllers/thumbnail');
 router.get('/videos', authMiddleware, async (req, res) => {
   try {
     const videos = await controller.getVideos();
-    res.json(videos);
+    setMediaCookie(req, res);
+    res.set('Cache-Control', 'no-store').json(Object.fromEntries(
+      Object.entries(videos).filter(([category]) => canAccessCategory(req, category))
+    ));
   } catch (error) {
     console.error('Error al obtener videos:', error);
     res.status(500).json({ error: 'Error al obtener el catálogo de videos.' });
@@ -63,7 +67,7 @@ router.get('/videos', authMiddleware, async (req, res) => {
  *       404:
  *         description: No se encontró la imagen
  */
-router.get('/thumbnail', thumbnailController.getThumbnail);
+router.get('/thumbnail', authMiddleware.mediaSession, requireCategory, thumbnailController.getThumbnail);
 
 /**
  * @swagger
@@ -88,9 +92,10 @@ router.get('/thumbnail', thumbnailController.getThumbnail);
  *       200:
  *         description: Objeto con la información de la película/serie
  */
-router.get('/info', authMiddleware, thumbnailController.getInfo);
+router.get('/info', authMiddleware, requireCategory, thumbnailController.getInfo);
 
 const requireAdmin = (req, res, next) => req.user?.role === 'admin' ? next() : res.sendStatus(403);
+router.get('/review', authMiddleware, requireAdmin, thumbnailController.getReview);
 router.get('/editor', authMiddleware, requireAdmin, thumbnailController.getEditor);
 router.get('/editor/anime', authMiddleware, requireAdmin, thumbnailController.searchEditorAnime);
 router.put('/editor', authMiddleware, requireAdmin, thumbnailController.saveEditor);

@@ -14,11 +14,11 @@ export class VideoService {
   constructor(private http: HttpClient) { }
 
   getVideos(): Observable<Video> {
-    return this.http.get<Video>(`${this.apiUrl}/api/video/videos`)
+    return this.http.get<Video>(`${this.apiUrl}/api/video/videos`, { withCredentials: true })
   }
 
   getVideosAndThumbnails(subfolder: string, titulo: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/api/video/videos`).pipe(
+    return this.http.get<any>(`${this.apiUrl}/api/video/videos`, { withCredentials: true }).pipe(
       map(response => response[subfolder][titulo]),
       // tap(seriesData => console.log('Contenido de videos:', seriesData.videos)),
     );

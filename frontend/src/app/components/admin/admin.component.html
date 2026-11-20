@@ -12,6 +12,21 @@
     <div><i class="pi pi-user" aria-hidden="true"></i><strong>{{ accounts.length - adminCount }}</strong><span>Usuarios</span></div>
   </div>
 
+  <section class="account-panel review-panel" aria-labelledby="approval-heading">
+    <div class="panel-header">
+      <div>
+        <h2 id="approval-heading">Aprobación de registros</h2>
+        <p *ngIf="accessSettings">{{ accessSettings.approvalRequired ? 'Las cuentas nuevas necesitan aprobación.' : 'Las cuentas nuevas se activan al registrarse.' }}</p>
+      </div>
+      <button *ngIf="accessSettings as settings" type="button" class="action secondary"
+              [disabled]="accessBusy" (click)="setApproval(!settings.approvalRequired)">
+        {{ settings.approvalRequired ? 'Desactivar aprobación' : 'Exigir aprobación' }}
+      </button>
+      <button *ngIf="!accessSettings && !accessBusy" type="button" class="action secondary" (click)="loadAccessSettings()">Reintentar</button>
+    </div>
+    <p *ngIf="accessError" class="panel-message" role="alert">{{ accessError }}</p>
+  </section>
+
   <section class="account-panel" aria-labelledby="accounts-heading">
     <div class="panel-header">
       <h2 id="accounts-heading">Cuentas</h2>
@@ -36,12 +51,18 @@
           <thead><tr><th scope="col">Usuario</th><th scope="col">Rol</th><th scope="col">Registro</th><th scope="col">Acciones</th></tr></thead>
           <tbody>
             <tr *ngFor="let account of visibleAccounts">
-              <th scope="row">{{ account.username }} <small *ngIf="account.id === accountId">Tu cuenta</small></th>
+              <th scope="row">{{ account.username }} <small *ngIf="account.id === accountId">Tu cuenta</small><small *ngIf="account.role === 'user' && accessSettings?.accounts?.[account.id]?.pending">Pendiente de aprobación</small></th>
               <td><span class="role" [class.role-admin]="account.role === 'admin'">{{ account.role === 'admin' ? 'Administrador' : 'Usuario' }}</span></td>
               <td><time [attr.datetime]="account.createdAt">{{ account.createdAt | date:'dd/MM/yyyy' }}</time></td>
               <td>
                 <button *ngIf="account.id !== accountId" class="action secondary" type="button" (click)="requestRole(account)"
                         [attr.aria-label]="'Cambiar rol de ' + account.username">Cambiar rol</button>
+                <ng-container *ngIf="account.role === 'user' && accessSettings">
+                  <button *ngIf="accessSettings.accounts[account.id]?.pending" type="button" class="action primary"
+                          [disabled]="accessBusy" (click)="approve(account)">Aprobar cuenta</button>
+                  <button type="button" class="action secondary" [disabled]="accessBusy"
+                          (click)="editCategories(account)">Categorías</button>
+                </ng-container>
               </td>
             </tr>
           </tbody>
@@ -51,9 +72,79 @@
     </ng-container>
   </section>
 
-  <section class="catalog-panel" aria-labelledby="admin-catalog">
-    <div><h2 id="admin-catalog">Fichas de la Biblioteca</h2><p>Abre un título y selecciona Editar ficha para corregir su portada, título o sinopsis.</p></div>
-    <a class="action secondary" routerLink="/browser">Abrir Biblioteca <i class="pi pi-arrow-right" aria-hidden="true"></i></a>
+  <section class="account-panel review-panel" aria-labelledby="invite-heading">
+    <div class="panel-header"><h2 id="invite-heading">Invitaciones</h2></div>
+    <p class="panel-message">Crea un enlace de un solo uso para un correo concreto. Caduca a los siete días.</p>
+    <form class="account-filters review-filters" #inviteForm="ngForm" (ngSubmit)="createInvite()">
+      <input type="email" name="inviteEmail" aria-label="Correo de la persona invitada"
+             placeholder="Correo de la persona invitada" [(ngModel)]="inviteEmail" email required>
+      <button type="submit" class="action primary" [disabled]="inviteForm.invalid || inviteBusy">Crear invitación</button>
+    </form>
+    <div class="account-filters review-filters" *ngIf="inviteUrl">
+      <input class="invite-url" type="url" readonly [value]="inviteUrl" aria-label="Enlace de invitación" #inviteLink>
+      <button type="button" class="action secondary" (click)="inviteLink.focus(); inviteLink.select()">Seleccionar enlace</button>
+    </div>
+    <p class="panel-message" *ngIf="inviteError" role="alert">{{ inviteError }}</p>
+    <ul class="review-list" *ngIf="invites.length">
+      <li *ngFor="let invite of invites">
+        <div class="review-title"><strong>{{ invite.email }}</strong><small>Caduca el {{ invite.expiresAt | date:'dd/MM/yyyy' }}</small></div>
+        <button *ngIf="revokeTarget !== invite.id" type="button" class="action secondary" [disabled]="inviteBusy"
+                (click)="revokeTarget = invite.id">Revocar</button>
+        <div class="dialog-actions" *ngIf="revokeTarget === invite.id">
+          <button type="button" class="action secondary" [disabled]="inviteBusy" (click)="revokeTarget = undefined">Cancelar</button>
+          <button type="button" class="action primary" [disabled]="inviteBusy" (click)="revokeInvite(invite.id)">Confirmar revocación</button>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <section id="review" #catalogReview class="account-panel review-panel" aria-labelledby="admin-catalog">
+    <div class="panel-header">
+      <div>
+        <h2 id="admin-catalog">Fichas por revisar</h2>
+        <p *ngIf="review">{{ review.entries.length }} de {{ review.total }} títulos requieren atención.</p>
+      </div>
+      <button type="button" class="action secondary" [disabled]="reviewLoading" (click)="loadReview()">
+        <i class="pi" [ngClass]="reviewLoading ? 'pi-spin pi-spinner' : 'pi-refresh'" aria-hidden="true"></i>
+        {{ reviewLoading ? 'Revisando…' : review ? 'Actualizar revisión' : 'Revisar Biblioteca' }}
+      </button>
+    </div>
+    <p class="panel-message" *ngIf="reviewError" role="alert">{{ reviewError }}</p>
+    <p class="panel-message" *ngIf="reviewLoading" role="status">Comprobando las fichas guardadas…</p>
+    <ng-container *ngIf="review && !reviewLoading">
+      <div class="account-filters review-filters" *ngIf="review.entries.length">
+        <input type="search" placeholder="Buscar título" aria-label="Buscar título" [(ngModel)]="reviewQuery" (ngModelChange)="reviewPage = 0">
+        <select aria-label="Filtrar fichas por problema" [(ngModel)]="reviewFilter" (ngModelChange)="reviewPage = 0">
+          <option value="all">Todos los estados</option>
+          <option value="synopsis">Sin sinopsis</option>
+          <option value="cover">Sin portada propia</option>
+          <option value="match">Sin coincidencia fiable</option>
+          <option value="pending">Pendiente de comprobar</option>
+        </select>
+      </div>
+      <p class="panel-message" *ngIf="!reviewPageEntries.length">
+        {{ review.entries.length ? 'No hay fichas que coincidan con los filtros.' : 'No hay fichas por revisar.' }}
+      </p>
+      <ul class="review-list" *ngIf="reviewPageEntries.length">
+        <li *ngFor="let entry of reviewPageEntries">
+          <div class="review-title">
+            <strong>{{ entry.title }}</strong>
+            <small>{{ entry.category }}</small>
+            <div class="review-issues">
+              <span class="role" [class.review-pending]="issue === 'pending'" *ngFor="let issue of entry.issues">{{ issueLabels[issue] }}</span>
+            </div>
+          </div>
+          <a class="action secondary" routerLink="/browser" [queryParams]="{ reviewCategory: entry.category, reviewTitle: entry.title }"
+             [attr.aria-label]="'Editar ficha de ' + entry.title">Editar ficha</a>
+        </li>
+      </ul>
+      <div class="review-pagination" *ngIf="reviewResults.length > reviewPageSize">
+        <button type="button" class="action secondary" [disabled]="reviewPage === 0" (click)="reviewPage = reviewPage - 1">Anterior</button>
+        <span aria-live="polite">Página {{ reviewPage + 1 }}</span>
+        <button type="button" class="action secondary" [disabled]="(reviewPage + 1) * reviewPageSize >= reviewResults.length"
+                (click)="reviewPage = reviewPage + 1">Siguiente</button>
+      </div>
+    </ng-container>
   </section>
 </div>
 
@@ -67,5 +158,23 @@
   <div class="dialog-actions">
     <button type="button" class="action secondary" autofocus [disabled]="saving" (click)="closeRoleDialog()">Cancelar</button>
     <button type="button" class="action primary" [disabled]="saving" (click)="applyRole()">{{ saving ? 'Guardando…' : 'Confirmar cambio' }}</button>
+  </div>
+</dialog>
+
+<dialog #accessDialog class="role-dialog" aria-labelledby="access-categories" (cancel)="accessBusy ? $event.preventDefault() : undefined">
+  <h2 id="access-categories">Categorías de {{ accessAccount?.username }}</h2>
+  <p *ngIf="!accessSettings?.categories?.length">No hay categorías en la Biblioteca.</p>
+  <fieldset class="category-options" [disabled]="accessBusy">
+    <legend>Categorías permitidas</legend>
+    <label *ngFor="let category of accessSettings?.categories">
+      <input type="checkbox" [checked]="!deniedCategories.includes(category)" #allowed
+             (change)="toggleCategory(category, allowed.checked)">
+      {{ category }}
+    </label>
+  </fieldset>
+  <p class="error" *ngIf="accessError" role="alert">{{ accessError }}</p>
+  <div class="dialog-actions">
+    <button type="button" class="action secondary" [disabled]="accessBusy" (click)="accessDialog.close()">Cancelar</button>
+    <button type="button" class="action primary" [disabled]="accessBusy" (click)="saveCategories()">Guardar permisos</button>
   </div>
 </dialog>

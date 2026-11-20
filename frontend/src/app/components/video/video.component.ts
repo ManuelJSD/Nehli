@@ -4,6 +4,8 @@ import { TreeNode } from 'primeng/api';
 import { catchError, forkJoin, of, Subscription, timeout } from 'rxjs';
 import videojs from 'video.js';
 import { VideoMetadata, VideoTrack } from 'src/app/interfaces/video.interface';
+import { findPreferredTrack, trackPreference, TrackPreferences } from 'src/app/interfaces/track-preferences';
+import { TrackPreferencesService } from 'src/app/services/track-preferences.service';
 import { VideoService } from 'src/app/services/video.service';
 import { WatchProgressService } from 'src/app/services/watch-progress.service';
 import { environments } from 'src/environments/environments';
@@ -87,6 +89,9 @@ export class VideoComponent implements OnInit, OnDestroy {
   currentSubtitleIndex = -1;
   playbackError = '';
   subtitleStatus = '';
+  preferenceStatus = '';
+  private preferences?: TrackPreferences;
+  private preferenceUpdates: Partial<Record<keyof TrackPreferences, number>> = {};
   hasTextSubtitles = false;
   subtitleStyle = readSubtitleStyle();
 
@@ -104,7 +109,7 @@ export class VideoComponent implements OnInit, OnDestroy {
   private pendingPlayback?: { time: number; paused: boolean };
   private onSourceReady?: () => void;
 
-  constructor(private route: ActivatedRoute, private videoService: VideoService, private progress: WatchProgressService) {
+  constructor(private route: ActivatedRoute, private videoService: VideoService, private progress: WatchProgressService, private trackPreferences: TrackPreferencesService) {
     this.category = this.route.snapshot.params['category'];
     this.subcategory = this.route.snapshot.params['subcategory'];
     this.video = this.route.snapshot.params['video'];
@@ -232,9 +237,12 @@ export class VideoComponent implements OnInit, OnDestroy {
 
     this.metadataRequest = forkJoin({
       metadata: this.videoService.getVideoMetadata(this.videoRelPath),
-      progress: this.progress.get(this.videoRelPath).pipe(timeout(2500), catchError(() => of(null)))
+      progress: this.progress.get(this.videoRelPath).pipe(timeout(2500), catchError(() => of(null))),
+      preferences: this.preferences ? of(this.preferences) : this.trackPreferences.get(this.category, this.subcategory)
+        .pipe(timeout(2500), catchError(() => of(undefined)))
     }).subscribe({
-      next: ({ metadata, progress }) => {
+      next: ({ metadata, progress, preferences }) => {
+        this.preferences = preferences;
         this.metadata = metadata;
         this.audios = metadata.audios;
         this.subtitles = metadata.subtitles;
@@ -246,8 +254,12 @@ export class VideoComponent implements OnInit, OnDestroy {
             title: language === 'und' ? title : title + ' (' + language.toUpperCase() + ')'
           }))
         ];
-        this.currentAudioIndex = (this.audios.find(track => track.default) || this.audios[0])?.index;
-        this.currentSubtitleIndex = (this.subtitles.find(track => track.default) || this.subtitles[0])?.index ?? -1;
+        this.currentAudioIndex = (findPreferredTrack(this.audios, preferences?.audio)
+          || this.audios.find(track => track.default) || this.audios[0])?.index;
+        const subtitlePreference = preferences?.subtitle;
+        const defaultSubtitle = this.subtitles.find(track => track.default) || this.subtitles[0];
+        this.currentSubtitleIndex = !subtitlePreference ? defaultSubtitle?.index ?? -1
+          : 'off' in subtitlePreference ? -1 : findPreferredTrack(this.subtitles, subtitlePreference)?.index ?? -1;
         const position = progress && !progress.completed && progress.position < metadata.duration
           ? progress.position : 0;
         if (position > 0) this.lastProgress = { position, completed: false };
@@ -261,12 +273,18 @@ export class VideoComponent implements OnInit, OnDestroy {
   }
 
   cambiarAudio({ value }: { value: number }): void {
+    const track = this.audios.find(item => item.index === value);
+    if (!track) return;
+    this.rememberTracks('audio', trackPreference(track));
     if (value === this.currentAudioIndex) return;
     this.currentAudioIndex = value;
     this.reloadSource();
   }
 
   cambiarSubtitulo({ value }: { value: number }): void {
+    const track = this.subtitles.find(item => item.index === value);
+    if (value !== -1 && !track) return;
+    this.rememberTracks('subtitle', track ? trackPreference(track) : { off: true });
     if (value === this.currentSubtitleIndex) return;
     const previous = this.selectedSubtitle();
     this.currentSubtitleIndex = value;
@@ -275,6 +293,18 @@ export class VideoComponent implements OnInit, OnDestroy {
     } else {
       void this.loadSubtitle();
     }
+  }
+
+  private rememberTracks<K extends keyof TrackPreferences>(kind: K, preference: NonNullable<TrackPreferences[K]>): void {
+    this.preferences = { ...this.preferences, [kind]: preference };
+    const update = (this.preferenceUpdates[kind] ?? 0) + 1;
+    this.preferenceUpdates[kind] = update;
+    this.preferenceStatus = '';
+    void this.trackPreferences.save(this.category, this.subcategory, kind, preference).then(saved => {
+      if (!saved && this.preferenceUpdates[kind] === update) {
+        this.preferenceStatus = 'No se pudo guardar la preferencia para esta serie.';
+      }
+    });
   }
 
   updateSubtitleStyle(changes: Partial<SubtitleStyle>): void {
@@ -344,10 +374,12 @@ export class VideoComponent implements OnInit, OnDestroy {
       if (!playback.paused) player.play()?.catch(() => {});
     };
     player.one('loadedmetadata', this.onSourceReady);
-    player.src({
+    const source = {
       src: this.streamUrl(useHls ? 'playlist' : 'play', query),
-      type: useHls ? 'application/x-mpegURL' : 'video/mp4'
-    });
+      type: useHls ? 'application/x-mpegURL' : 'video/mp4',
+      withCredentials: true
+    };
+    player.src(source);
     void this.loadSubtitle();
   }
 
@@ -387,13 +419,13 @@ export class VideoComponent implements OnInit, OnDestroy {
     try {
       const url = this.streamUrl('subtitle', query);
       // Show the start of the track without waiting for the entire video to be read.
-      const preview = await fetch(url + '&preview=1', { signal: request.signal })
+      const preview = await fetch(url + '&preview=1', { signal: request.signal, credentials: 'include' })
         .then(response => response.ok ? response.text() : '')
         .catch(() => '');
       if (request.signal.aborted) return;
       if (preview.includes(' --> ')) this.setSubtitleText(preview);
 
-      const response = await fetch(url, { signal: request.signal });
+      const response = await fetch(url, { signal: request.signal, credentials: 'include' });
       if (!response.ok) {
         const failure = await response.json().catch(() => undefined);
         throw new Error(failure?.error === 'La pista no contiene subtítulos de texto'

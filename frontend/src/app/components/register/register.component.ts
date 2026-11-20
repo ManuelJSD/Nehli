@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { LoginService } from 'src/app/services/login.service';
 
@@ -9,6 +9,7 @@ import { LoginService } from 'src/app/services/login.service';
   styleUrls: ['../auth.css']
 })
 export class RegisterComponent implements OnInit, OnDestroy {
+  readonly invitation = this.route.snapshot.fragment || '';
   username = '';
   password = '';
   passwordConfirmation = '';
@@ -19,14 +20,15 @@ export class RegisterComponent implements OnInit, OnDestroy {
   loadingChallenge = false;
   isLoading = false;
   errorMessage = '';
+  pendingApproval = false;
 
   private challengeRequest?: Subscription;
   private registerRequest?: Subscription;
 
-  constructor(private loginService: LoginService, private router: Router) {}
+  constructor(private loginService: LoginService, private router: Router, private route: ActivatedRoute) {}
 
   ngOnInit(): void {
-    this.refreshChallenge();
+    if (this.invitation) this.refreshChallenge();
   }
 
   ngOnDestroy(): void {
@@ -66,13 +68,17 @@ export class RegisterComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
     this.registerRequest = this.loginService.register(
-      this.username, this.password, this.email, this.passwordConfirmation, this.challenge.id, this.challengeAnswer
+      this.username, this.password, this.email, this.passwordConfirmation, this.challenge.id, this.challengeAnswer, this.invitation
     ).subscribe({
-      next: () => { this.router.navigate(['/login']); },
+      next: response => {
+        this.isLoading = false;
+        if (response.data?.pendingApproval) this.pendingApproval = true;
+        else this.router.navigate(['/login']);
+      },
       error: response => {
         this.errorMessage = response.error?.error || response.error?.errors?.[0]?.msg || 'No se pudo crear la cuenta.';
         this.isLoading = false;
-        this.refreshChallenge();
+        if (this.invitation) this.refreshChallenge();
       }
     });
   }

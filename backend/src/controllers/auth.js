@@ -5,6 +5,8 @@ const { cuentasModel } = require('../models');
 const { sequelize } = require('../config/mysql');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
+const accountLinks = require('../utils/accountLinks');
+const { Policy, policyFor } = require('../utils/accessPolicy');
 
 /**
  * Registra un nuevo usuario en el sistema.
@@ -15,7 +17,12 @@ const bcrypt = require('bcryptjs');
  */
 const registerCtrl = async (req, res) => {
     try {
+        const invitationToken = req.body.invitation;
         req = matchedData(req);
+        const invitation = await accountLinks.find('invite', invitationToken);
+        if (!invitation || invitation.email !== req.email.trim().toLowerCase()) {
+            return handleHttpError(res, 'La invitación no es válida para este correo o ha caducado.', 400);
+        }
 
         // Verificar username y email en paralelo para reducir latencia
         const [userExistente, emailExistente] = await Promise.all([
@@ -36,10 +43,23 @@ const registerCtrl = async (req, res) => {
         // Hashear la contraseña antes de guardar
         const hashedPassword = await bcrypt.hash(req.password, 10);
         const body = { username: req.username, email: req.email, password: hashedPassword };
-        const dataUser = await cuentasModel.create(body);
+        const dataUser = await sequelize.transaction(async transaction => {
+            const active = await accountLinks.find('invite', invitationToken, transaction);
+            if (!active) return null;
+            const account = await cuentasModel.create(body, { transaction });
+            const settings = await Policy.findByPk(0, { transaction });
+            if (settings?.approvalRequired) {
+                await Policy.create({ accountId: account.id, pending: true }, { transaction });
+                account.pendingApproval = true;
+            }
+            await active.destroy({ transaction });
+            return account;
+        });
+        if (!dataUser) return handleHttpError(res, 'La invitación ya se ha utilizado o ha caducado.', 400);
 
         const data = {
-            token: await tokenSign(dataUser),
+            pendingApproval: !!dataUser.pendingApproval,
+            ...(dataUser.pendingApproval ? {} : { token: await tokenSign(dataUser) })
         };
 
         // Enviar email de bienvenida (no bloquea la respuesta)
@@ -97,6 +117,10 @@ const loginCtrl = async (req, res) => {
         if (!check) {
             handleHttpError(res, 'El usuario o la contraseña son incorrectos.', 401);
             return;
+        }
+
+        if ((await policyFor(user)).pending) {
+            return handleHttpError(res, 'Tu cuenta está pendiente de aprobación.', 403);
         }
 
         const data = {
@@ -224,11 +248,15 @@ const updateAccountRoleCtrl = async (req, res, next) => {
                 attributes: ['id', 'role'], transaction, lock: transaction.LOCK.UPDATE
             });
             if (!target) return 404;
+            if (role === 'admin' && (await Policy.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE }))?.pending) {
+                return 409;
+            }
             await target.update({ role }, { fields: ['role'], transaction });
             return 204;
         });
         if (result === 403) return handleHttpError(res, 'No tienes permisos.', 403);
         if (result === 404) return handleHttpError(res, 'La cuenta no existe.', 404);
+        if (result === 409) return handleHttpError(res, 'Aprueba la cuenta antes de darle el rol de administrador.', 409);
         res.sendStatus(204);
     } catch (error) {
         next(error);

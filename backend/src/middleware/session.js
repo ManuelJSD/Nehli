@@ -1,36 +1,27 @@
-const { handleHttpError } = require("../utils/handleError");
-const { verifyToken } = require("../utils/handleJwt")
-const { cuentasModel } = require("../models")
+const { handleHttpError } = require('../utils/handleError');
+const { verifyToken } = require('../utils/handleJwt');
+const { cuentasModel } = require('../models');
+const { cookieToken, policyFor } = require('../utils/accessPolicy');
 
-const authMiddleware = async (req, res, next) => {
-  try {
+function authenticate(allowMediaCookie = false) {
+    return async (req, res, next) => {
+        try {
+            const authorization = req.headers.authorization;
+            const token = authorization ? authorization.split(' ').pop() : allowMediaCookie && cookieToken(req);
+            const payload = token && await verifyToken(token);
+            const account = payload && await cuentasModel.findOne({ where: { id: payload.id } });
+            if (!account) return handleHttpError(res, 'Necesitas iniciar sesión.', 401);
+            const access = await policyFor(account);
+            if (access.pending) return handleHttpError(res, 'Tu cuenta está pendiente de aprobación.', 403);
+            req.user = account;
+            req.access = access;
+            req.sessionToken = token;
+            next();
+        } catch (error) {
+            next(error);
+        }
+    };
+}
 
-    if(!req.headers.authorization){
-        handleHttpError(res, "NEED_SESSION", 401);
-        return
-    }
-
-    const token = req.headers.authorization.split(' ').pop();
-    const dataToken = await verifyToken(token);
-
-    if(!dataToken){
-        handleHttpError(res, "NOT_PAYLOAD_DATA", 401);
-        return
-    }
-
-     const cuenta = await cuentasModel.findOne({
-      where: {id: dataToken.id}
-     })
-
-     req.user = cuenta
-    
-
-    next()
-    
-
-  } catch (e) {
-    handleHttpError(res, "NOT_SESSION", 401);
-  }
-};
-
-module.exports = authMiddleware;
+module.exports = authenticate();
+module.exports.mediaSession = authenticate(true);

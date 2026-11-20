@@ -64,6 +64,7 @@ export class GenerosComponent implements OnInit, OnDestroy {
   generosAnime: AnimeCard[] = [];
   isLoading = true;
   isError = false;
+  rateLimited = false;
   private request?: Subscription;
 
   constructor(private animeService: MyanimeService) {}
@@ -93,7 +94,7 @@ export class GenerosComponent implements OnInit, OnDestroy {
         this.pageCount = result.pagination.last_visible_page;
         this.isLoading = false;
       },
-      error: () => { this.isError = true; this.isLoading = false; }
+      error: error => { this.rateLimited = error.status === 429; this.isError = true; this.isLoading = false; }
     });
   }
 }

@@ -48,7 +48,9 @@ async function readLocal(category, title) {
     let categoryPath;
     try {
         root = await fs.realpath(library);
-        categoryPath = await fs.realpath(path.join(root, category));
+        const candidate = path.join(root, category);
+        if (!(await fs.lstat(candidate)).isDirectory()) return {};
+        categoryPath = await fs.realpath(candidate);
         if (!isWithin(root, categoryPath)) return {};
         entries = await fs.readdir(categoryPath, { withFileTypes: true });
     } catch {
@@ -416,10 +418,10 @@ async function warm() {
                     try {
                         const edited = await overrides.read(category, title);
                         const { fields, cover } = await readLocal(category, title);
-                        if (edited.image || edited.match || (cover && fields?.synopsis)) continue;
+                        if (edited.match || ((edited.image || cover) && (edited.synopsis || fields?.synopsis))) continue;
                         const match = await externalMetadata(category, fields?.title || title, fields?.year);
                         while (disk.playbackBusy()) await pause(2000);
-                        if (!cover) {
+                        if (!cover && !edited.image) {
                             if (validCover(match?.coverUrl)) {
                                 const cached = await disk.load('cover', match.coverUrl, 7 * 86400000, () => downloadCover(match.coverUrl));
                                 if (cached) continue;
@@ -546,5 +548,64 @@ const saveEditor = titleHandler(async (res, category, title, local, req) => {
     res.sendStatus(204);
 });
 
+async function cachedReviewMatch(category, title, year) {
+    const key = JSON.stringify([category, title, year]);
+    const entry = cache.get(key);
+    if (entry && entry.expires !== Infinity) return { checked: true, match: await entry.result };
+    const saved = await disk.read('json', key, 6 * 60 * 60 * 1000);
+    if (!saved) return { checked: false };
+    try {
+        return { checked: true, match: JSON.parse(saved.toString('utf8')) };
+    } catch {
+        return { checked: false };
+    }
+}
+
+async function reviewTitle(category, title) {
+    const [{ fields, cover }, edited] = await Promise.all([readLocal(category, title), overrides.read(category, title)]);
+    const localSynopsis = edited.synopsis || fields?.synopsis;
+    const localCover = edited.image || (cover && !edited.match?.coverUrl);
+    if (localSynopsis && localCover) return [];
+
+    const identity = titleIdentity(fields?.title || title);
+    const hasProvider = ['anime', 'series', 'peliculas', 'animacion'].includes(normalize(category)) && identity.key;
+    const { checked, match } = edited.match ? { checked: true, match: edited.match }
+        : hasProvider ? await cachedReviewMatch(category, fields?.title || title, fields?.year) : { checked: true };
+    if (!checked) return ['pending'];
+
+    const issues = [];
+    if (!localSynopsis && !match?.synopsis) issues.push('synopsis');
+    if (!localCover && !validCover(match?.coverUrl)) issues.push('cover');
+    if (!match) issues.push('match');
+    return issues;
+}
+
+let reviewRequest;
+
+async function reviewCatalog() {
+    const catalog = await getVideos();
+    const titles = Object.entries(catalog).flatMap(([category, titles]) =>
+        Object.keys(titles).map(title => ({ category, title })));
+    const entries = [];
+    for (let start = 0; start < titles.length; start += 12) {
+        const batch = await Promise.all(titles.slice(start, start + 12).map(async entry => {
+            const issues = await reviewTitle(entry.category, entry.title).catch(() => ['pending']);
+            return { ...entry, issues };
+        }));
+        entries.push(...batch.filter(entry => entry.issues.length));
+    }
+    entries.sort((a, b) => Number(a.issues.includes('pending')) - Number(b.issues.includes('pending')));
+    return { total: titles.length, entries };
+}
+
+async function getReview(req, res, next) {
+    try {
+        reviewRequest ??= reviewCatalog().finally(() => { reviewRequest = undefined; });
+        res.set('Cache-Control', 'no-store').json(await reviewRequest);
+    } catch (error) {
+        next(error);
+    }
+}
+
 onCatalogRefresh(prewarmCatalog);
-module.exports = { getThumbnail, getInfo, getEditor, saveEditor, searchEditorAnime };
+module.exports = { getThumbnail, getInfo, getEditor, saveEditor, searchEditorAnime, getReview };

@@ -11,6 +11,7 @@ export class PopularesComponent implements OnInit, OnDestroy {
   populares: AnimeCard[] = [];
   isLoading = true;
   isError = false;
+  rateLimited = false;
   private request?: Subscription;
 
   constructor(private animeService: MyanimeService) {}
@@ -24,7 +25,7 @@ export class PopularesComponent implements OnInit, OnDestroy {
     this.isError = false;
     this.request = this.animeService.obtenerPopulares().subscribe({
       next: data => { this.populares = data; this.isLoading = false; },
-      error: () => { this.isError = true; this.isLoading = false; }
+      error: error => { this.rateLimited = error.status === 429; this.isError = true; this.isLoading = false; }
     });
   }
 }

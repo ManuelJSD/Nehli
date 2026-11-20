@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { Router } from '@angular/router';
 import { environments } from 'src/environments/environments';
 
 @Injectable({
@@ -13,7 +12,7 @@ export class LoginService {
   private loginUrl = `${this.apiUrl}/api/auth/login`; // URL del endpoint de login en el backend
   private registroUrl = `${this.apiUrl}/api/auth/register`;
 
-  constructor(private http: HttpClient, private router: Router) { }
+  constructor(private http: HttpClient) { }
 
   login(username: string, password: string): Observable<any> {
     return this.http.post<any>(this.loginUrl, { username, password })
@@ -36,12 +35,9 @@ export class LoginService {
   }
 
   register(username: string, password: string, email: string, passwordConfirmation: string,
-           challengeId: string, challengeAnswer: string) {
-    return this.http.post<any>(this.registroUrl, { username, email, password, passwordConfirmation, challengeId, challengeAnswer })
+           challengeId: string, challengeAnswer: string, invitation: string) {
+    return this.http.post<any>(this.registroUrl, { username, email, password, passwordConfirmation, challengeId, challengeAnswer, invitation })
       .pipe(
-        tap(() => {
-          this.router.navigate(['/welcome']);
-        }),
         catchError(error => {
           // Manejar el error en caso de que ocurra.
           console.error('Ocurrió un error en el registro:', error);
@@ -100,6 +96,7 @@ export class LoginService {
   logout(): void {
     // Eliminar el token del localStorage
     localStorage.removeItem('token');
+    this.http.post<void>(this.apiUrl + '/api/access/logout', {}, { withCredentials: true }).subscribe({ error: () => {} });
   }
 
 }

@@ -22,7 +22,7 @@
              [class.subtitle-outline-enabled]="subtitleStyle.outline"
              [style.--subtitle-text-color]="subtitleStyle.color"
              [style.--subtitle-background]="subtitleStyle.background">
-          <video id="my-video" class="video-js vjs-fluid" crossorigin="anonymous" playsinline></video>
+          <video id="my-video" class="video-js vjs-fluid" crossorigin="use-credentials" playsinline></video>
           <div *ngIf="loadingVideo" class="player-feedback" role="status">
             <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
             <span>Preparando vídeo…</span>
@@ -118,6 +118,7 @@
             </div>
           </details>
 
+          <p role="status" *ngIf="preferenceStatus" class="subtitle-status">{{ preferenceStatus }}</p>
           <p role="status" *ngIf="subtitleStatus" class="subtitle-status">{{ subtitleStatus }}</p>
         </section>
       </section>
